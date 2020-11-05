@@ -6,18 +6,19 @@ AXP20X_Class *power;
 
 //Si on doit couper l'ecrant, le bouton (irq = interupt)
 bool irq = false;
+
 //Quel mode somme nous (0 = Batterie, 1 = Clock)
 unsigned int screenMode = 0;
+
+//Si on allume l'ecran
+bool screenDisplay = true;
 
 //Simplification
 #define boutonPin AXP202_INT
 
-//Pour l'heure
+/*Pour l'heure*/
 uint32_t targetTime = 0;       // for next 1 second timeout
-byte omm = 99;
-boolean initial = 1;
-byte xcolon = 0;
-unsigned int colour = 0;
+byte minuteCache = 99;         // Pour l'affichage de l'heure (evité l'effet stroboscope)
 static uint8_t conv2d(const char *p){
     uint8_t v = 0;
     if ('0' <= *p && *p <= '9')
@@ -33,7 +34,7 @@ void setup() {
   ttgo = TTGOClass::getWatch();
   //On initialise le materiel
   ttgo->begin();
-  //On démarre la lumiere de l'ecrant
+  //On démarre la lumiere de l'ecran
   ttgo->openBL();
 
   //Simplification
@@ -61,13 +62,41 @@ void setup() {
   Serial.println("START");
 }
 
+//Calculer l'heure
+void timeCalc(){
+  if (targetTime < millis()) {
+    targetTime = millis() + 1000;
+    ss++;              // Advance second
+    if (ss == 60) {
+      ss = 0;
+      minuteCache = mm;
+      mm++;            // Advance minute
+      if (mm > 59) {
+        mm = 0;
+        hh++;          // Advance hour
+        if (hh > 23) {
+          hh = 0;
+        }
+      }
+    }
+  }
+}
+
+//Pour gérer l'allumage ou non de l'ecran
+void screenDisplayer(){
+  if (screenDisplay == true){
+    ttgo->openBL();
+  }else{
+    ttgo->closeBL();
+  }
+}
+
 void displayBatterie(){
   //On met la taille de l'ecriture a 2
   tft->setTextFont(2);
   //On choisie la couleur du texte a vert et le fond en noir
   tft->setTextColor(TFT_GREEN, TFT_BLACK);
-  
-  tft->fillRect(0, 0, 210, 130, TFT_BLACK);
+  //On met le curseur en haut à gauche
   tft->setCursor(0, 0);
 
   tft->print("VBUS STATUS: ");
@@ -127,122 +156,104 @@ void displayBatterie(){
   }
 }
 
+//L'ecran de l'horloge
+void clockScreen(){
+  if (minuteCache != mm) { //Si les minute on changer
+    Serial.println("reload hour");
+    displayClock();
+  }
+}
 void displayClock(){
-    if (targetTime < millis()) {
-        targetTime = millis() + 1000;
-        ss++;              // Advance second
-        if (ss == 60) {
-            ss = 0;
-            omm = mm;
-            mm++;            // Advance minute
-            if (mm > 59) {
-                mm = 0;
-                hh++;          // Advance hour
-                if (hh > 23) {
-                    hh = 0;
-                }
-            }
-        }
-        if (ss == 0 || initial) {
-            initial = 0;
-            ttgo->tft->setTextColor(TFT_GREEN, TFT_BLACK);
-            ttgo->tft->setCursor (8, 52);
-            ttgo->tft->print(__DATE__); // This uses the standard ADAFruit small font
+  byte xpos = 6;
+  byte ypos = 0;
+  ttgo->tft->setTextColor(0x39C4, TFT_BLACK);         //On change la couleur du texte
+  // Font 7 is to show a pseudo 7 segment display.
+  // Font 7 only contains characters [space] 0 1 2 3 4 5 6 7 8 9 0 : .
+  ttgo->tft->drawString("88:88", xpos, ypos, 7);      //On affiche les segment pour l'ecriture de l'heure
+  ttgo->tft->setTextColor(0xFBE0, TFT_BLACK);         // Orange
+  minuteCache = mm;                                   //On remet le cache à jour
 
-            ttgo->tft->setTextColor(TFT_BLUE, TFT_BLACK);
-            ttgo->tft->drawCentreString("It is windy", 120, 48, 2); // Next size up font 2
-
-            //ttgo->tft->setTextColor(0xF81F, TFT_BLACK); // Pink
-            //ttgo->tft->drawCentreString("12.34",80,100,6); // Large font 6 only contains characters [space] 0 1 2 3 4 5 6 7 8 9 . : a p m
-        }
-
-        // Update digital time
-        byte xpos = 6;
-        byte ypos = 0;
-        if (omm != mm) { // Only redraw every minute to minimise flicker
-            // Uncomment ONE of the next 2 lines, using the ghost image demonstrates text overlay as time is drawn over it
-            ttgo->tft->setTextColor(0x39C4, TFT_BLACK);  // Leave a 7 segment ghost image, comment out next line!
-            //ttgo->tft->setTextColor(TFT_BLACK, TFT_BLACK); // Set font colour to black to wipe image
-            // Font 7 is to show a pseudo 7 segment display.
-            // Font 7 only contains characters [space] 0 1 2 3 4 5 6 7 8 9 0 : .
-            ttgo->tft->drawString("88:88", xpos, ypos, 7); // Overwrite the text to clear it
-            ttgo->tft->setTextColor(0xFBE0, TFT_BLACK); // Orange
-            omm = mm;
-
-            if (hh < 10) xpos += ttgo->tft->drawChar('0', xpos, ypos, 7);
-            xpos += ttgo->tft->drawNumber(hh, xpos, ypos, 7);
-            xcolon = xpos;
-            xpos += ttgo->tft->drawChar(':', xpos, ypos, 7);
-            if (mm < 10) xpos += ttgo->tft->drawChar('0', xpos, ypos, 7);
-            ttgo->tft->drawNumber(mm, xpos, ypos, 7);
-        }
-
-        if (ss % 2) { // Flash the colon
-            ttgo->tft->setTextColor(0x39C4, TFT_BLACK);
-            xpos += ttgo->tft->drawChar(':', xcolon, ypos, 7);
-            ttgo->tft->setTextColor(0xFBE0, TFT_BLACK);
-        } else {
-            ttgo->tft->drawChar(':', xcolon, ypos, 7);
-            colour = random(0xFFFF);
-            // Erase the old text with a rectangle, the disadvantage of this method is increased display flicker
-            ttgo->tft->fillRect (0, 64, 160, 20, TFT_BLACK);
-            ttgo->tft->setTextColor(colour);
-            ttgo->tft->drawRightString("Colour", 75, 64, 4); // Right justified string drawing to x position 75
-            String scolour = String(colour, HEX);
-            scolour.toUpperCase();
-            char buffer[20];
-            scolour.toCharArray(buffer, 20);
-            ttgo->tft->drawString(buffer, 82, 64, 4);
-        }
-    }
+  //On verifie si on remplis la case vide des heure (un numero sur deux)
+  if (hh < 10){
+    xpos += ttgo->tft->drawChar('0', xpos, ypos, 7);
+  }
+  xpos += ttgo->tft->drawNumber(hh, xpos, ypos, 7);
+  xpos += ttgo->tft->drawChar(':', xpos, ypos, 7);
+  //On verifie si on remplis la case vide des minute (un numero sur deux)
+  if (mm < 10){ 
+    xpos += ttgo->tft->drawChar('0', xpos, ypos, 7);
+  }
+  ttgo->tft->drawNumber(mm, xpos, ypos, 7);
 }
 
 void loop(){
-  Serial.println(irq);
-  
-  if (screenMode == 0){
-    //on affiche le niveau de batterie
-    displayBatterie();
-  }
-  if (screenMode == 1){
-    displayClock();  
+  //On verifie si l'ecran doit etre alumé ou non
+  screenDisplayer();
+  //Calcule de l'heure
+  timeCalc();
+
+  //Si l'ecran est allumé
+  if (screenDisplay == true){
+    if (screenMode == 0){
+      //on affiche le niveau de batterie
+      displayBatterie();
+    }
+    if (screenMode == 1){
+      //on affiche l'heure
+      clockScreen();  
+    }
+
+    //Si on appuis sur l'ecran
+    int16_t x, y;
+    if (ttgo->getTouch(x, y)) {
+      Serial.println("Change Mode");
+      if (screenMode == 0){//on passe du mode batterie à mode heure
+        //On met l'ecran en noir
+        tft->fillScreen(TFT_BLACK);
+        screenMode = 1;
+        displayClock();//on affiche l'heure
+      }else{
+        if (screenMode == 1){//on passe du mode heure à mode batterie
+          //On met l'ecrant en noir
+          tft->fillScreen(TFT_BLACK);
+          screenMode = 0;
+        }
+      }
+      delay(100);
+    }
   }
 
-  //Si on appuis sur l'ecran
-  int16_t x, y;
-  if (ttgo->getTouch(x, y)) {
-    Serial.println("Change Mode");
-    if (screenMode == 0){
-      //On met l'ecrant en noir
-      tft->fillScreen(TFT_BLACK);
-      screenMode = 1;
-    }else{
-      if (screenMode == 1){
-        //On met l'ecrant en noir
-        tft->fillScreen(TFT_BLACK);
-        screenMode = 0;
-      }
-    }
-    delay(100);
-  }
-    
+
+  //bouton pressé
   if (irq) {
+    //on remet la variable trigger à False
     irq = false;
+    //on regarde le type d'interuption
     power->readIRQ();
+    //si l'interuption est une pression rapide
     if (power->isPEKShortPressIRQ()) {
+      //Si l'ecran est allumer alors on l'eteind
+      if (screenDisplay == true){
+        Serial.println("Turn off screen");
+        screenDisplay = false;
+      }else{
+        //Si l'ecran est eteind alors on l'allume
+        screenDisplay = true;
+        Serial.println("Turn on screen");
+      }
       
-      irq = false;
-      Serial.println("PowerOff");
+      
       // Set screen and touch to sleep mode
-      ttgo->displaySleep();
-      ttgo->powerOff();
+      //ttgo->displaySleep();
+      //ttgo->powerOff();
 
       // TOUCH SCREEN  Wakeup source
-      esp_sleep_enable_ext1_wakeup(GPIO_SEL_38, ESP_EXT1_WAKEUP_ALL_LOW);
+      // esp_sleep_enable_ext1_wakeup(GPIO_SEL_38, ESP_EXT1_WAKEUP_ALL_LOW);
       // PEK KEY  Wakeup source
-      // esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
-      esp_deep_sleep_start();
+      //esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
+      //esp_deep_sleep_start();
     }
+    Serial.println(screenDisplay);
     power->clearIRQ();
   }
   
