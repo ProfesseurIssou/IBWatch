@@ -4,27 +4,37 @@ TTGOClass *ttgo;
 TFT_eSPI *tft;
 AXP20X_Class *power;
 
-//Si on doit couper l'ecrant, le bouton (irq = interupt)
-bool irq = false;
+/*
+code    color
+0x0000  Black
+0xFFFF  White
+0xBDF7  Light Gray
+0x7BEF  Dark Gray
+0xF800  Red
+0xFFE0  Yellow
+0xFBE0  Orange
+0x79E0  Brown
+0x7E0   Green
+0x7FF   Cyan
+0x1F    Blue
+0xF81F  Pink
+*/
 
-//Quel mode somme nous (0 = Batterie, 1 = Clock)
-unsigned int screenMode = 0;
+bool irq = false;               //Si on doit couper l'ecrant, le bouton (irq = interupt)
+unsigned int screenMode = 0;    //Quel mode somme nous (0 = MainMenu)
+bool screenDisplay = true;      //Si on allume l'ecran
 
-//Si on allume l'ecran
-bool screenDisplay = true;
-
-//Simplification
-#define boutonPin AXP202_INT
+#define boutonPin AXP202_INT    //Simplification
 
 /*Pour l'heure*/
-unsigned int targetss,targetmm,targethh;//le temp a ajouter au compteur
-byte minuteCache = 99;         // Pour l'affichage de l'heure (evité l'effet stroboscope)
 static uint8_t conv2d(const char *p){
     uint8_t v = 0;
     if ('0' <= *p && *p <= '9')
         v = *p - '0';
     return 10 * v + *++p - '0';
 }
+unsigned int targetss,targetmm,targethh;//le temp a ajouter au compteur
+byte minuteCache = 99;         // Pour l'affichage de l'heure (evité l'effet stroboscope)
 uint8_t basehh = conv2d(__TIME__), basemm = conv2d(__TIME__ + 3), basess = conv2d(__TIME__ + 6); // Get H, M, S from compile time
 uint8_t hh,mm,ss;             //Le temp à ajouter
 //Convert all data into second
@@ -32,35 +42,22 @@ unsigned int baseSec = (basehh * 3600) + (basemm * 60) + basess;
 
 void setup() {
   Serial.begin(115200);
-  //Récuperation des instance de la montre
-  ttgo = TTGOClass::getWatch();
-  //On initialise le materiel
-  ttgo->begin();
-  //On démarre la lumiere de l'ecran
-  ttgo->openBL();
-
-  //Simplification
-  tft = ttgo->tft;
-  power = ttgo->power;
+  ttgo = TTGOClass::getWatch();                   //Récuperation des instance de la montre
+  ttgo->begin();                                  //On initialise le materiel
+  ttgo->openBL();                                 //On démarre la lumiere de l'ecran
+  tft = ttgo->tft;                              //Simplification
+  power = ttgo->power;                          //Simplification
   
   //On met en route le moniteur de puissance
   power->adc1Enable(AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1 | AXP202_BATT_CUR_ADC1 | AXP202_BATT_VOL_ADC1, true);
 
-  //On definie le bouton comme entrée
-  pinMode(boutonPin, INPUT_PULLUP);
-  //Si le bouton est presser alors on passe la variable irq a True
-  attachInterrupt(boutonPin, [] {irq = true;}, FALLING);
-
+  pinMode(boutonPin, INPUT_PULLUP);                     //On definie le bouton comme entrée
+  attachInterrupt(boutonPin, [] {irq = true;}, FALLING);//Si le bouton est presser alors on passe la variable irq a True
   
-  // Must be enabled first, and then clear the interrupt status,
-  // otherwise abnormal
-  power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);
-  //  Clear interrupt status
-  power->clearIRQ();
+  power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ, true);    //On met en place le systeme d'interuption grace au bouton
+  power->clearIRQ();                                    //On vide l'interuption
  
-  //Preparation de l'ecran
-  //On met l'ecrant en noir
-  tft->fillScreen(TFT_BLACK); 
+  tft->fillScreen(TFT_BLACK);                           //On met l'ecrant en noir
   Serial.println("START");
 }
 
@@ -85,133 +82,69 @@ void screenDisplayer(){
 }
 
 void displayBatterie(){
-  //On met la taille de l'ecriture a 2
-  tft->setTextFont(2);
-  //On choisie la couleur du texte a vert et le fond en noir
-  tft->setTextColor(TFT_GREEN, TFT_BLACK);
-  //On met le curseur en haut à gauche
-  tft->setCursor(0, 0);
+  tft->setTextFont(2);                    //On met la taille de l'ecriture a 2
+  tft->setCursor(200, 0);                 //On met le curseur en haut à gauche
 
-  tft->print("VBUS STATUS: ");
-  // You can use isVBUSPlug to check whether the USB connection is normal
-  if (power->isVBUSPlug()) {
-    tft->println("CONNECT");
-
-    // Get USB voltage
-    tft->print("VBUS Voltage:");
-    tft->print(power->getVbusVoltage());
-    tft->println(" mV");
-
-    // Get USB current
-    tft->print("VBUS Current: ");
-    tft->print(power->getVbusCurrent());
-    tft->println(" mA");
-
+  if (power->isChargeing()) {             //Si le chargeur est brancher
+    tft->setTextColor(0x7E0, TFT_BLACK); //On choisie la couleur du texte a vert et le fond en noir
   } else {
-
-    tft->setTextColor(TFT_RED, TFT_BLACK);
-    tft->println("DISCONNECT");
-    tft->setTextColor(TFT_GREEN, TFT_BLACK);
+    tft->setTextColor(0xFFFF, TFT_BLACK); //On choisie la couleur du texte a blanc et le fond en noir
   }
-
-  tft->println();
-
-  tft->print("BATTERY STATUS: ");
-  // You can use isBatteryConnect() to check whether the battery is connected properly
-  if (power->isBatteryConnect()) {
-    tft->println("CONNECT");
-
-    // Get battery voltage
-    tft->print("BAT Voltage:");
-    tft->print(power->getBattVoltage());
-    tft->println(" mV");
-
-    // To display the charging status, you must first discharge the battery,
-    // and it is impossible to read the full charge when it is fully charged
-    if (power->isChargeing()) {
-      tft->print("Charge:");
-      tft->print(power->getBattChargeCurrent());
-      tft->println(" mA");
-    } else {
-      // Show current consumption
-      tft->print("Discharge:");
-      tft->print(power->getBattDischargeCurrent());
-      tft->println(" mA");
-      tft->print("Per: ");
-      tft->print(power->getBattPercentage());
-      tft->println(" %");
-
-    }
-  } else {
-    tft->setTextColor(TFT_RED, TFT_BLACK);
-    tft->println("DISCONNECT");
-    tft->setTextColor(TFT_GREEN, TFT_BLACK);
-  }
+  tft->print(power->getBattPercentage()); //On affiche la batterie
+  tft->println("%");                      //On affiche le logo%
 }
 
-//L'ecran de l'horloge
-void clockScreen(){
+void displayClock(){
+  tft->setTextFont(2);                    //On met la taille de l'ecriture a 2
+  tft->setTextColor(0xFFFF, TFT_BLACK);   //On choisie la couleur du texte a orange et le fond en noir
+  tft->setCursor(0, 0);                   //On met le curseur en haut à gauche
+  minuteCache = mm;                       //On remet le cache à jour
+  
+  /*Eviter les caratère parasite (réafficher un caratère vide)*/
+  if (hh < 10){                                       //Si l'heure est sur 1 chiffre
+    tft->print(" ");                                  //On affiche un caratère vide
+  }
+  tft->print(hh);                                     //On affiche l'heure
+  tft->print(":");                                    //On affiche le séparateur heure/minute
+  if (mm < 10){                                       //Si les minutes est sur 1 chiffre
+    tft->print("0");                                  //On affiche un 0
+  }
+  tft->print(mm);                                     //On affiche les minute
+}
+
+/*Barre des notification*/
+void notificationBar(){
+  //Rectangle en haut de l'ecran
+  
+  /*Affichage de l'heure*/
   if (minuteCache != mm) { //Si les minute on changer
     Serial.println("reload hour");
     displayClock();
   }
-}
-void displayClock(){
-  byte xpos = 6;
-  byte ypos = 0;
-  ttgo->tft->setTextColor(0x39C4, TFT_BLACK);         //On change la couleur du texte
-  // Font 7 is to show a pseudo 7 segment display.
-  // Font 7 only contains characters [space] 0 1 2 3 4 5 6 7 8 9 0 : .
-  ttgo->tft->drawString("88:88", xpos, ypos, 7);      //On affiche les segment pour l'ecriture de l'heure
-  ttgo->tft->setTextColor(0xFBE0, TFT_BLACK);         // Orange
-  minuteCache = mm;                                   //On remet le cache à jour
 
-  //On verifie si on remplis la case vide des heure (un numero sur deux)
-  if (hh < 10){
-    xpos += ttgo->tft->drawChar('0', xpos, ypos, 7);
-  }
-  xpos += ttgo->tft->drawNumber(hh, xpos, ypos, 7);
-  xpos += ttgo->tft->drawChar(':', xpos, ypos, 7);
-  //On verifie si on remplis la case vide des minute (un numero sur deux)
-  if (mm < 10){ 
-    xpos += ttgo->tft->drawChar('0', xpos, ypos, 7);
-  }
-  ttgo->tft->drawNumber(mm, xpos, ypos, 7);
+  /*Affichage de la batterie*/
+  displayBatterie();
+}
+
+//Affichage du menu principale
+void mainMenu(){
+  /*Affichage de la bar de notification*/
+  notificationBar();
 }
 
 void loop(){
-  //On verifie si l'ecran doit etre alumé ou non
-  screenDisplayer();
-  //Calcule de l'heure
-  timeCalc();
+  screenDisplayer();                        //On verifie si l'ecran doit etre alumé ou non
+  timeCalc();                               //Calcule de l'heure
 
-  //Si l'ecran est allumé
-  if (screenDisplay == true){
+  if (screenDisplay == true){               //Si l'ecran est allumé
     if (screenMode == 0){
-      //on affiche le niveau de batterie
-      displayBatterie();
+      mainMenu();                           //On affiche le menu principale
     }
-    if (screenMode == 1){
-      //on affiche l'heure
-      clockScreen();  
-    }
-
-    //Si on appuis sur l'ecran
+    
+    /*Si on appuis sur l'ecran*/
     int16_t x, y;
     if (ttgo->getTouch(x, y)) {
       Serial.println("Change Mode");
-      if (screenMode == 0){//on passe du mode batterie à mode heure
-        //On met l'ecran en noir
-        tft->fillScreen(TFT_BLACK);
-        screenMode = 1;
-        displayClock();//on affiche l'heure
-      }else{
-        if (screenMode == 1){//on passe du mode heure à mode batterie
-          //On met l'ecrant en noir
-          tft->fillScreen(TFT_BLACK);
-          screenMode = 0;
-        }
-      }
       delay(100);
     }
   }
@@ -246,7 +179,6 @@ void loop(){
       //esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
       //esp_deep_sleep_start();
     }
-    Serial.println(screenDisplay);
     power->clearIRQ();
   }
   
