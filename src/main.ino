@@ -17,7 +17,7 @@ bool screenDisplay = true;
 #define boutonPin AXP202_INT
 
 /*Pour l'heure*/
-uint32_t targetTime = 0;       // for next 1 second timeout
+unsigned int targetss,targetmm,targethh;//le temp a ajouter au compteur
 byte minuteCache = 99;         // Pour l'affichage de l'heure (evité l'effet stroboscope)
 static uint8_t conv2d(const char *p){
     uint8_t v = 0;
@@ -25,8 +25,8 @@ static uint8_t conv2d(const char *p){
         v = *p - '0';
     return 10 * v + *++p - '0';
 }
-uint8_t hh = conv2d(__TIME__), mm = conv2d(__TIME__ + 3), ss = conv2d(__TIME__ + 6); // Get H, M, S from compile time
-
+uint8_t basehh = conv2d(__TIME__), basemm = conv2d(__TIME__ + 3), basess = conv2d(__TIME__ + 6); // Get H, M, S from compile time
+uint8_t hh,mm,ss;             //Le temp à ajouter
 
 void setup() {
   Serial.begin(115200);
@@ -64,22 +64,15 @@ void setup() {
 
 //Calculer l'heure
 void timeCalc(){
-  if (targetTime < millis()) {
-    targetTime = millis() + 1000;
-    ss++;              // Advance second
-    if (ss == 60) {
-      ss = 0;
-      minuteCache = mm;
-      mm++;            // Advance minute
-      if (mm > 59) {
-        mm = 0;
-        hh++;          // Advance hour
-        if (hh > 23) {
-          hh = 0;
-        }
-      }
-    }
-  }
+  //calcul du temps d'execution
+  targetss = millis() / 1000;
+  targetmm = targetss / 60;
+  targetss = targetss % 60;
+  targethh = targetmm / 60;
+  targetmm = targetmm % 60;
+  ss = basess + targetss;
+  mm = basemm + targetmm;
+  hh = basehh + targethh;
 }
 
 //Pour gérer l'allumage ou non de l'ecran
