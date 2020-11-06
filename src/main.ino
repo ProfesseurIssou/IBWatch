@@ -27,6 +27,8 @@ static uint8_t conv2d(const char *p){
 }
 uint8_t basehh = conv2d(__TIME__), basemm = conv2d(__TIME__ + 3), basess = conv2d(__TIME__ + 6); // Get H, M, S from compile time
 uint8_t hh,mm,ss;             //Le temp à ajouter
+//Convert all data into second
+unsigned int baseSec = (basehh * 3600) + (basemm * 60) + basess;
 
 void setup() {
   Serial.begin(115200);
@@ -65,14 +67,12 @@ void setup() {
 //Calculer l'heure
 void timeCalc(){
   //calcul du temps d'execution
-  targetss = millis() / 1000;
-  targetmm = targetss / 60;
-  targetss = targetss % 60;
-  targethh = targetmm / 60;
-  targetmm = targetmm % 60;
-  ss = basess + targetss;
-  mm = basemm + targetmm;
-  hh = basehh + targethh;
+  targetss = (millis() / 1000) + baseSec;               //nb second from start
+  targetmm = ((millis() / 1000) + baseSec) /60;         //take minute from start
+  targethh = ((millis() / 1000) + baseSec) /3600;       //take hour from start
+  ss = targetss % 60;
+  mm = targetmm % 60;
+  hh = targethh % 24;
 }
 
 //Pour gérer l'allumage ou non de l'ecran

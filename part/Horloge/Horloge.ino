@@ -36,14 +36,12 @@ void setup() {
 //Calculer l'heure
 void timeCalc(){
   //calcul du temps d'execution
-  targetss = millis() / 1000;
-  targetmm = targetss / 60;
-  targetss = targetss % 60;
-  targethh = targetmm / 60;
-  targetmm = targetmm % 60;
-  ss = basess + targetss;
-  mm = basemm + targetmm;
-  hh = basehh + targethh;
+  targetss = (millis() / 1000) + baseSec;               //nb second from start
+  targetmm = ((millis() / 1000) + baseSec) /60;         //take minute from start
+  targethh = ((millis() / 1000) + baseSec) /3600;       //take hour from start
+  ss = targetss % 60;
+  mm = targetmm % 60;
+  hh = targethh % 24;
 }
 
 //L'ecran de l'horloge
