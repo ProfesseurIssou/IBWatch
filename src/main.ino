@@ -23,7 +23,7 @@ code    color
 bool irq = false;               //Si on doit couper l'ecrant, le bouton (irq = interupt)
 unsigned int screenMode = 0;    //Quel mode somme nous (0 = MainMenu)
 bool screenDisplay = true;      //Si on allume l'ecran
-
+unsigned int vibratorLimit = 0; //La limite en milliseconde que le moteur doit fonctionner (si l'horloge en milli de l'esp est supérieur alors il stop
 #define boutonPin AXP202_INT    //Simplification
 
 /*Pour l'heure*/
@@ -45,6 +45,7 @@ void setup() {
   ttgo = TTGOClass::getWatch();                   //Récuperation des instance de la montre
   ttgo->begin();                                  //On initialise le materiel
   ttgo->openBL();                                 //On démarre la lumiere de l'ecran
+  ttgo->motor_begin();                            //On démarre le moteur de vibration pin IO4
   tft = ttgo->tft;                              //Simplification
   power = ttgo->power;                          //Simplification
   
@@ -72,6 +73,19 @@ void timeCalc(){
   hh = targethh % 24;
 }
 
+//Utilisation du moteur pour les vibration
+void setVibrator(unsigned int timer){
+  vibratorLimit = millis() + timer;
+  Serial.print("VibratorLimit : ");
+  Serial.println(vibratorLimit);
+}
+void vibrator(){
+  if (vibratorLimit > millis()){            //Si on doit allumer le vibreur
+    Serial.println("Vibrator");
+    ttgo->motor->onec();                    //On allume le vibreur
+  }
+}
+
 //Pour gérer l'allumage ou non de l'ecran
 void screenDisplayer(){
   if (screenDisplay == true){
@@ -81,19 +95,19 @@ void screenDisplayer(){
   }
 }
 
-void displayBatterie(){
-  tft->setTextFont(2);                    //On met la taille de l'ecriture a 2
-  tft->setCursor(200, 0);                 //On met le curseur en haut à gauche
-
-  if (power->isChargeing()) {             //Si le chargeur est brancher
-    tft->setTextColor(0x7E0, TFT_BLACK); //On choisie la couleur du texte a vert et le fond en noir
-  } else {
-    tft->setTextColor(0xFFFF, TFT_BLACK); //On choisie la couleur du texte a blanc et le fond en noir
+/*Barre des notification*/
+void notificationBar(){
+  //Rectangle en haut de l'ecran
+  
+  /*Affichage de l'heure*/
+  if (minuteCache != mm) { //Si les minute on changer
+    Serial.println("reload hour");
+    displayClock();
   }
-  tft->print(power->getBattPercentage()); //On affiche la batterie
-  tft->println("%");                      //On affiche le logo%
-}
 
+  /*Affichage de la batterie*/
+  displayBatterie();
+}
 void displayClock(){
   tft->setTextFont(2);                    //On met la taille de l'ecriture a 2
   tft->setTextColor(0xFFFF, TFT_BLACK);   //On choisie la couleur du texte a orange et le fond en noir
@@ -111,19 +125,17 @@ void displayClock(){
   }
   tft->print(mm);                                     //On affiche les minute
 }
+void displayBatterie(){
+  tft->setTextFont(2);                    //On met la taille de l'ecriture a 2
+  tft->setCursor(200, 0);                 //On met le curseur en haut à gauche
 
-/*Barre des notification*/
-void notificationBar(){
-  //Rectangle en haut de l'ecran
-  
-  /*Affichage de l'heure*/
-  if (minuteCache != mm) { //Si les minute on changer
-    Serial.println("reload hour");
-    displayClock();
+  if (power->isChargeing()) {             //Si le chargeur est brancher
+    tft->setTextColor(0x7E0, TFT_BLACK); //On choisie la couleur du texte a vert et le fond en noir
+  } else {
+    tft->setTextColor(0xFFFF, TFT_BLACK); //On choisie la couleur du texte a blanc et le fond en noir
   }
-
-  /*Affichage de la batterie*/
-  displayBatterie();
+  tft->print(power->getBattPercentage()); //On affiche la batterie
+  tft->println("%");                      //On affiche le logo%
 }
 
 //Affichage du menu principale
@@ -135,6 +147,7 @@ void mainMenu(){
 void loop(){
   screenDisplayer();                        //On verifie si l'ecran doit etre alumé ou non
   timeCalc();                               //Calcule de l'heure
+  vibrator();                               //On verifie si on doit utilisé le vibreur
 
   if (screenDisplay == true){               //Si l'ecran est allumé
     if (screenMode == 0){
@@ -150,25 +163,20 @@ void loop(){
   }
 
 
-  //bouton pressé
+  /*bouton pressé*/
   if (irq) {
-    //on remet la variable trigger à False
-    irq = false;
-    //on regarde le type d'interuption
-    power->readIRQ();
-    //si l'interuption est une pression rapide
-    if (power->isPEKShortPressIRQ()) {
-      //Si l'ecran est allumer alors on l'eteind
-      if (screenDisplay == true){
+    irq = false;                          //on remet la variable trigger à False
+    power->readIRQ();                     //on regarde le type d'interuption
+    if (power->isPEKShortPressIRQ()) {    //si l'interuption est une pression rapide
+      if (screenDisplay == true){         //Si l'ecran est allumer alors on l'eteint
         Serial.println("Turn off screen");
-        screenDisplay = false;
-      }else{
-        //Si l'ecran est eteind alors on l'allume
-        screenDisplay = true;
+        screenDisplay = false;            //On eteint l'ecran
+        setVibrator(200);                 //On vibre pendant 0.2 seconde
+      }else{                              //Sinon l'ecran est eteind alors on l'allume
         Serial.println("Turn on screen");
+        screenDisplay = true;             //On allume l'ecran
+        setVibrator(200);                 //On vibre pendant 0.2 seconde
       }
-      
-      
       // Set screen and touch to sleep mode
       //ttgo->displaySleep();
       //ttgo->powerOff();
