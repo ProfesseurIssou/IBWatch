@@ -21,7 +21,10 @@ code    color
 0xF81F  Pink
 */
 
+unsigned int ss,mn,hh,dd,mm,yy; //Variables pour les dates et les heures
+byte minuteCache = 99;          //Variable pour evite le refresh constant de l'heure
 bool irq = false;               //Si on doit couper l'ecrant, le bouton (irq = interupt)
+bool rtcIrq = false;            //Quand l'horloge envoie une interuption (alarme)
 unsigned int screenMode = 0;    //Quel mode somme nous (0 = MainMenu)
 bool screenDisplay = true;      //Si on allume l'ecran
 unsigned int vibratorLimit = 0; //La limite en milliseconde que le moteur doit fonctionner (si l'horloge en milli de l'esp est supérieur alors il stop
@@ -32,20 +35,6 @@ const uint16_t wallpaper1[] PROGMEM={6339,6339,6306,6339,6371,6306,8452,6339,633
 int wallpaper1_width = 240;
 int wallpaper1_height = 229;
 int actualWallpaper = 0;    //Wallpaper actuel an fond (pour le refresh)
-
-/*Pour l'heure*/
-static uint8_t conv2d(const char *p){
-    uint8_t v = 0;
-    if ('0' <= *p && *p <= '9')
-        v = *p - '0';
-    return 10 * v + *++p - '0';
-}
-unsigned int targetss,targetmm,targethh;//le temp a ajouter au compteur
-byte minuteCache = 99;         // Pour l'affichage de l'heure (evité l'effet stroboscope)
-uint8_t basehh = conv2d(__TIME__), basemm = conv2d(__TIME__ + 3), basess = conv2d(__TIME__ + 6); // Get H, M, S from compile time
-uint8_t hh,mm,ss;             //Le temp à ajouter
-//Convert all data into second
-unsigned int baseSec = (basehh * 3600) + (basemm * 60) + basess;
 
 void setup() {
   Serial.begin(115200);
@@ -59,6 +48,9 @@ void setup() {
   //On met en route le moniteur de puissance
   power->adc1Enable(AXP202_VBUS_VOL_ADC1 | AXP202_VBUS_CUR_ADC1 | AXP202_BATT_CUR_ADC1 | AXP202_BATT_VOL_ADC1, true);
 
+  pinMode(RTC_INT_PIN, INPUT_PULLUP);                     //On definie le rtc comme entrée
+  attachInterrupt(RTC_INT_PIN, [] {rtcIrq = 1;}, FALLING);//Si l'horloge arrive à une alarme alors on passe la variable rtcIrq a True
+
   pinMode(boutonPin, INPUT_PULLUP);                     //On definie le bouton comme entrée
   attachInterrupt(boutonPin, [] {irq = true;}, FALLING);//Si le bouton est presser alors on passe la variable irq a True
   
@@ -66,21 +58,40 @@ void setup() {
   power->clearIRQ();                                    //On vide l'interuption
 
   tft->setSwapBytes(1);                                 //Convertion pour l'affichage des image
+
+  //ttgo->rtc->setDateTime(2020,11, 10, 22, 04, 40);      //Changement de l'heure du RTC a 10/11/2020 à 22H04 00s
  
   tft->fillScreen(TFT_BLACK);                           //On met l'ecrant en noir
   Serial.println("START");
-
 }
 
-//Calculer l'heure
+//Calculer l'heure et la date
 void timeCalc(){
-  //calcul du temps d'execution
-  targetss = (millis() / 1000) + baseSec;               //nb second from start
-  targetmm = ((millis() / 1000) + baseSec) /60;         //take minute from start
-  targethh = ((millis() / 1000) + baseSec) /3600;       //take hour from start
-  ss = targetss % 60;
-  mm = targetmm % 60;
-  hh = targethh % 24;
+  //on récupère les données du RTC format (2019-08-12/15:00:56)
+  String timeData(ttgo->rtc->formatDateTime(PCF_TIMEFORMAT_YYYY_MM_DD_H_M_S));//on copie la constante dans une variable modifiable
+  String date,times;                // Les variables des parties du timeData
+  unsigned int pos = 0;             // La position des séparateurs
+
+  //Separation des dates et des heures
+  pos = timeData.indexOf("/");      //Recuperation de l'emplacement du séparateur
+  date = timeData.substring(0,pos); //Recuperation de la partie des dates
+  times = timeData.substring(pos+1,timeData.length());//Recuperation de la partie du temps
+
+  //Separation des dates
+  pos = date.indexOf("-");      //Recuperation de l'emplacement du séparateur
+  yy = date.substring(0,pos).toInt();//Recuperation de la partie de l'annee
+  pos = date.indexOf("-");      //Recuperation de l'emplacement du séparateur
+  date = date.substring(pos+1,date.length());//Recuperation du reste de la partie
+  mm = date.substring(0,pos).toInt();//Recuperation de la partie du mois
+  dd = date.substring(pos+1,date.length()).toInt();//Recuperation de la partie des jours
+
+  //Separation des heures
+  pos = times.indexOf(":");                           //Recuperation de l'emplacement du séparateur
+  hh = times.substring(0,pos).toInt();                //Recuperation de la partie des heures
+  pos = times.indexOf(":");                           //Recuperation de l'emplacement du séparateur
+  times = times.substring(pos+1,times.length());      //Recuperation du reste de la partie
+  mn = times.substring(0,pos).toInt();                //Recuperation de la partie des minutes
+  ss = times.substring(pos+1,times.length()).toInt(); //Recuperation de la partie des secondes
 }
 
 //Utilisation du moteur pour les vibration
@@ -107,10 +118,11 @@ void screenDisplayer(){
 
 /*Barre des notification*/
 void displayClock(){
+  timeCalc();                             //Calcule de l'heure
   tft->setTextFont(2);                    //On met la taille de l'ecriture a 2
   tft->setTextColor(0xFFFF, TFT_BLACK);   //On choisie la couleur du texte a orange et le fond en noir
   tft->setCursor(0, 0);                   //On met le curseur en haut à gauche
-  minuteCache = mm;                       //On remet le cache à jour
+  minuteCache = mn;                       //On remet le cache à jour
   
   /*Eviter les caratère parasite (réafficher un caratère vide)*/
   if (hh < 10){                                       //Si l'heure est sur 1 chiffre
@@ -118,10 +130,10 @@ void displayClock(){
   }
   tft->print(hh);                                     //On affiche l'heure
   tft->print(":");                                    //On affiche le séparateur heure/minute
-  if (mm < 10){                                       //Si les minutes est sur 1 chiffre
+  if (mn < 10){                                       //Si les minutes est sur 1 chiffre
     tft->print("0");                                  //On affiche un 0
   }
-  tft->print(mm);                                     //On affiche les minute
+  tft->print(mn);                                     //On affiche les minute
 }
 void displayBatterie(){
   tft->setTextFont(2);                    //On met la taille de l'ecriture a 2
@@ -149,7 +161,7 @@ void notificationBar(){
   //Rectangle en haut de l'ecran
   
   /*Affichage de l'heure*/
-  if (minuteCache != mm) { //Si les minute on changer
+  if (minuteCache != mn) { //Si les minute on changer
     Serial.println("reload hour");
     displayClock();
   }
@@ -172,9 +184,8 @@ void mainMenu(){
   notificationBar();                                                      //Affichage de la barre des notification
 }
 
-void loop(){
-  screenDisplayer();                        //On verifie si l'ecran doit etre alumé ou non
-  timeCalc();                               //Calcule de l'heure
+void loop(){  
+  //screenDisplayer();                        //On verifie si l'ecran doit etre alumé ou non
   vibrator();                               //On verifie si on doit utilisé le vibreur
 
   if (screenDisplay == true){               //Si l'ecran est allumé
@@ -190,32 +201,42 @@ void loop(){
     }
   }
 
-
   /*bouton pressé*/
   if (irq) {
     irq = false;                          //on remet la variable trigger à False
     power->readIRQ();                     //on regarde le type d'interuption
     if (power->isPEKShortPressIRQ()) {    //si l'interuption est une pression rapide
-      if (screenDisplay == true){         //Si l'ecran est allumer alors on l'eteint
-        Serial.println("Turn off screen");
-        screenDisplay = false;            //On eteint l'ecran
-        setVibrator(200);                 //On vibre pendant 0.2 seconde
-      }else{                              //Sinon l'ecran est eteind alors on l'allume
-        Serial.println("Turn on screen");
-        screenDisplay = true;             //On allume l'ecran
-        setVibrator(200);                 //On vibre pendant 0.2 seconde
-      }
+      //if (screenDisplay == true){         //Si l'ecran est allumer alors on l'eteint
+        //Serial.println("Turn off screen");
+        //screenDisplay = false;            //On eteint l'ecran
+        //setVibrator(200);                 //On vibre pendant 0.2 seconde
+      //}else{                              //Sinon l'ecran est eteind alors on l'allume
+        //Serial.println("Turn on screen");
+        //screenDisplay = true;             //On allume l'ecran
+        //setVibrator(200);                 //On vibre pendant 0.2 seconde
+      //}
+      
+      // Clean power chip irq status
+      power->clearIRQ();
       // Set screen and touch to sleep mode
-      //ttgo->displaySleep();
-      //ttgo->powerOff();
+      ttgo->displaySleep();
+      ttgo->powerOff();
 
+      //Set all channel power off
+      power->setPowerOutPut(AXP202_LDO3, false);
+      power->setPowerOutPut(AXP202_LDO4, false);
+      power->setPowerOutPut(AXP202_LDO2, false);
+      power->setPowerOutPut(AXP202_EXTEN, false);
+      power->setPowerOutPut(AXP202_DCDC2, false);
+ 
       // TOUCH SCREEN  Wakeup source
-      // esp_sleep_enable_ext1_wakeup(GPIO_SEL_38, ESP_EXT1_WAKEUP_ALL_LOW);
+      //esp_sleep_enable_ext1_wakeup(GPIO_SEL_38, ESP_EXT1_WAKEUP_ALL_LOW);
       // PEK KEY  Wakeup source
-      //esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
-      //esp_deep_sleep_start();
+      esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
+      esp_deep_sleep_start();
     }
     power->clearIRQ();
+    delay(1000);
   }
   
   delay(100);
