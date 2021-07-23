@@ -2,7 +2,6 @@
 
 #include "config.h"                                                                           //Configuration des librairies
 #include "color.h"                                                                            //Couleur en HEX (COLOR_###)
-#include "wallpaper.h"                                                                        //Liste des images de fond
 #include "function.h"                                                                         //Vibrate()
 
 //CONFIG//
@@ -22,8 +21,6 @@ bool rtcIrq = false;            //Quand l'horloge envoie une interuption (alarme
 unsigned int screenMode = 0;    //Quel mode somme nous (0 = MainMenu)
 bool screenDisplay = true;      //Si on allume l'ecran
 #define boutonPin AXP202_INT    //Simplification
-
-int actualWallpaper = 0;    //Wallpaper actuel an fond (pour le refresh)
 
 void setup() {
   Serial.begin(SERIAL_SPEED);
@@ -147,17 +144,9 @@ void notificationBar(){
   displayBatterie();
 }
 
-/*Affichage de l'image du fond*/
-void displayWallpaper(const uint16_t wallpaperData[], int wallpaperData_width, int wallpaperData_height) {
-  tft->pushImage(0, 0, wallpaperData_width, wallpaperData_height, wallpaperData);      //Affichage du fond d'ecran séléctionné
-}
-
 //Affichage du menu principale
 void mainMenu(){
-  if (actualWallpaper != 1) {                                             //Si on doit mettre à neuf l'affichage
-    displayWallpaper(Wallpaper_1,Wallpaper_1_width,Wallpaper_1_height);   //Affichage du wallpaper1   
-    actualWallpaper = 1;                                                  //On affirme que le wallpaper1 est bien mis
-  }
+  DisplayImage(1,0,0,ttgo);                                               //Affichage de l'image de fond
   notificationBar();                                                      //Affichage de la barre des notification
 }
 
