@@ -2,31 +2,33 @@
 
 #include "config.h"                                                                           //Configuration des librairies
 #include "color.h"                                                                            //Couleur en HEX (COLOR_###)
-#include "function.h"                                                                         //Vibrate()
+#include "function.h"                                                                         //Vibrate() DisplayImage() SetBackLight()
 
 //CONFIG//
 #define SERIAL_SPEED 115200                                                                   //Vitesse de communication
 //######//
 
-
+//CLASS//
 TTGOClass *ttgo;
 TFT_eSPI *tft;
 AXP20X_Class *power;
-
+//#####//
 
 unsigned int ss,mn,hh,dd,mm,yy; //Variables pour les dates et les heures
 byte minuteCache = 99;          //Variable pour evite le refresh constant de l'heure
 bool irq = false;               //Si on doit couper l'ecrant, le bouton (irq = interupt)
 bool rtcIrq = false;            //Quand l'horloge envoie une interuption (alarme)
-unsigned int screenMode = 0;    //Quel mode somme nous (0 = MainMenu)
-bool screenDisplay = true;      //Si on allume l'ecran
 #define boutonPin AXP202_INT    //Simplification
 
-void setup() {
-  Serial.begin(SERIAL_SPEED);
-  ttgo = TTGOClass::getWatch();                   //Récuperation des instance de la montre
+//STATES//
+bool wallpaperDisplayed;                                                                      //Si le fond d'ecran est déjà affiché
+//######//
+
+void setup(){
+  Serial.begin(SERIAL_SPEED);                                                                   //On definie la vitesse de communication
+  ttgo = TTGOClass::getWatch();                                                                 //Récuperation des instance de la montre
   ttgo->begin();                                  //On initialise le materiel
-  ttgo->openBL();                                 //On démarre la lumiere de l'ecran
+  SetBackLight(true,ttgo);                                                                      //On demarre le retroeclairage
   ttgo->motor_begin();                            //On démarre le moteur de vibration pin IO4
   tft = ttgo->tft;                              //Simplification
   power = ttgo->power;                          //Simplification
@@ -46,6 +48,10 @@ void setup() {
   tft->setSwapBytes(1);                                 //Convertion pour l'affichage des image
 
   //ttgo->rtc->setDateTime(2020,11, 10, 22, 04, 40);    //Changement de l'heure du RTC a 10/11/2020 à 22H04 00s
+
+  //DEFAULT//
+  wallpaperDisplayed = false;                                                                   //Le fond d'ecran n'est pas encore affiché
+  //#######//
  
   tft->fillScreen(TFT_BLACK);                           //On met l'ecrant en noir
   Serial.println("START");
@@ -79,15 +85,6 @@ void timeCalc(){
   times = times.substring(pos+1,times.length());      //Recuperation du reste de la partie
   mn = times.substring(0,pos).toInt();                //Recuperation de la partie des minutes
   ss = times.substring(pos+1,times.length()).toInt(); //Recuperation de la partie des secondes
-}
-
-//Pour gérer l'allumage ou non de l'ecran
-void screenDisplayer(){
-  if (screenDisplay == true){
-    ttgo->openBL();
-  }else{
-    ttgo->closeBL();
-  }
 }
 
 /*Barre des notification*/
@@ -146,24 +143,23 @@ void notificationBar(){
 
 //Affichage du menu principale
 void mainMenu(){
-  DisplayImage(1,0,0,ttgo);                                               //Affichage de l'image de fond
+  if(!wallpaperDisplayed){                                                //Si le fond d'ecran n'est pas encore affiché
+    DisplayImage(1,0,0,ttgo);                                               //Affichage de l'image de fond
+    wallpaperDisplayed = true;                                              //Le fond d'ecran est affiché
+  }
+  
   notificationBar();                                                      //Affichage de la barre des notification
 }
 
-void loop(){  
-  //screenDisplayer();                        //On verifie si l'ecran doit etre alumé ou non
+void loop(){
+  mainMenu();                           //On affiche le menu principale
 
-  if (screenDisplay == true){               //Si l'ecran est allumé
-    if (screenMode == 0){
-      mainMenu();                           //On affiche le menu principale
-    }
-    
-    /*Si on appuis sur l'ecran*/
-    int16_t x, y;
-    if (ttgo->getTouch(x, y)) {
-      Serial.println("Change Mode");
-      delay(100);
-    }
+  
+  /*Si on appuis sur l'ecran*/
+  int16_t x, y;
+  if (ttgo->getTouch(x, y)) {
+    Serial.println("Change Mode");
+    delay(100);
   }
 
   /*bouton pressé*/

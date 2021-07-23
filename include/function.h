@@ -24,3 +24,9 @@ void DisplayImage(uint prmImageID,uint prmX,uint prmY,TTGOClass *prmTTGO){
             break;
     }
 }
+
+//Gestion du retro eclairage
+void SetBackLight(bool prmState,TTGOClass *prmTTGO){
+    if(prmState)prmTTGO->openBL();                                                                      //Si on allume
+    if(!prmState)prmTTGO->closeBL();                                                                    //Si on eteint
+}
