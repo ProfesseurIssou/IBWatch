@@ -25,8 +25,25 @@ void DisplayImage(uint prmImageID,uint prmX,uint prmY,TTGOClass *prmTTGO){
     }
 }
 
-//Gestion du retro eclairage
-void SetBackLight(bool prmState,TTGOClass *prmTTGO){
+//Gestion du retro eclairage (prmBrightness [0,255])
+void SetBackLight(bool prmState,uint prmBrightness,TTGOClass *prmTTGO){
+    //Variables
+    //Programme
     if(prmState)prmTTGO->openBL();                                                                      //Si on allume
     if(!prmState)prmTTGO->closeBL();                                                                    //Si on eteint
+    prmTTGO->setBrightness(prmBrightness);                                                              //On definie la luminosité
+}
+
+//Definir l'heure du RTC
+void SetRTC(uint prmYear,uint prmMonth,uint prmDay,uint prmHour,uint prmMinute,uint prmSecond,TTGOClass *prmTTGO){
+    //Variables
+    //Programme
+    prmTTGO->rtc->setDateTime(prmYear,prmMonth,prmDay,prmHour,prmMinute,prmSecond);
+}
+//Recuperation de la date format (2019-08-12/15:00:56)
+String GetRTC(){
+    //Variables
+    String timeData(ttgo->rtc->formatDateTime(PCF_TIMEFORMAT_YYYY_MM_DD_H_M_S));                        //On recupere les données du RTC au format (2019-08-12/15:00:56)
+    //Programme
+    return timeData;
 }

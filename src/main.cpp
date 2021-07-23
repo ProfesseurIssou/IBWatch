@@ -2,7 +2,7 @@
 
 #include "config.h"                                                                           //Configuration des librairies
 #include "color.h"                                                                            //Couleur en HEX (COLOR_###)
-#include "function.h"                                                                         //Vibrate() DisplayImage() SetBackLight()
+#include "function.h"                                                                         //Vibrate() DisplayImage() SetBackLight() SetRTC() GetRTC()
 
 //CONFIG//
 #define SERIAL_SPEED 115200                                                                   //Vitesse de communication
@@ -25,10 +25,10 @@ bool wallpaperDisplayed;                                                        
 //######//
 
 void setup(){
-  Serial.begin(SERIAL_SPEED);                                                                   //On definie la vitesse de communication
-  ttgo = TTGOClass::getWatch();                                                                 //Récuperation des instance de la montre
+    Serial.begin(SERIAL_SPEED);                                                                 //On definie la vitesse de communication
+    ttgo = TTGOClass::getWatch();                                                               //Récuperation des instance de la montre
   ttgo->begin();                                  //On initialise le materiel
-  SetBackLight(true,ttgo);                                                                      //On demarre le retroeclairage
+    SetBackLight(true,255,ttgo);                                                                //On demarre le retroeclairage
   ttgo->motor_begin();                            //On démarre le moteur de vibration pin IO4
   tft = ttgo->tft;                              //Simplification
   power = ttgo->power;                          //Simplification
@@ -47,21 +47,19 @@ void setup(){
 
   tft->setSwapBytes(1);                                 //Convertion pour l'affichage des image
 
-  //ttgo->rtc->setDateTime(2020,11, 10, 22, 04, 40);    //Changement de l'heure du RTC a 10/11/2020 à 22H04 00s
-
-  //DEFAULT//
-  wallpaperDisplayed = false;                                                                   //Le fond d'ecran n'est pas encore affiché
-  //#######//
+    //DEFAULT//
+    wallpaperDisplayed = false;                                                                 //Le fond d'ecran n'est pas encore affiché
+    //#######//
  
   tft->fillScreen(TFT_BLACK);                           //On met l'ecrant en noir
   Serial.println("START");
-  Vibrate(10,ttgo);                                                                             //On lance la vibration de demarrage
+    Vibrate(10,ttgo);                                                                           //On lance la vibration de demarrage
 }
 
 //Calculer l'heure et la date
 void timeCalc(){
   //on récupère les données du RTC format (2019-08-12/15:00:56)
-  String timeData(ttgo->rtc->formatDateTime(PCF_TIMEFORMAT_YYYY_MM_DD_H_M_S));//on copie la constante dans une variable modifiable
+    String timeData = GetRTC();                                                                 //On recupere les données du RTC
   String date,times;                // Les variables des parties du timeData
   unsigned int pos = 0;             // La position des séparateurs
 
@@ -141,64 +139,59 @@ void notificationBar(){
   displayBatterie();
 }
 
-//Affichage du menu principale
-void mainMenu(){
-  if(!wallpaperDisplayed){                                                //Si le fond d'ecran n'est pas encore affiché
-    DisplayImage(1,0,0,ttgo);                                               //Affichage de l'image de fond
-    wallpaperDisplayed = true;                                              //Le fond d'ecran est affiché
-  }
-  
-  notificationBar();                                                      //Affichage de la barre des notification
-}
-
 void loop(){
-  mainMenu();                           //On affiche le menu principale
-
-  
-  /*Si on appuis sur l'ecran*/
-  int16_t x, y;
-  if (ttgo->getTouch(x, y)) {
-    Serial.println("Change Mode");
-    delay(100);
-  }
-
-  /*bouton pressé*/
-  if (irq) {
-    irq = false;                          //on remet la variable trigger à False
-    power->readIRQ();                     //on regarde le type d'interuption
-    if (power->isPEKShortPressIRQ()) {    //si l'interuption est une pression rapide
-      //if (screenDisplay == true){         //Si l'ecran est allumer alors on l'eteint
-        //Serial.println("Turn off screen");
-        //screenDisplay = false;            //On eteint l'ecran
-        //setVibrator(200);                 //On vibre pendant 0.2 seconde
-      //}else{                              //Sinon l'ecran est eteind alors on l'allume
-        //Serial.println("Turn on screen");
-        //screenDisplay = true;             //On allume l'ecran
-        //setVibrator(200);                 //On vibre pendant 0.2 seconde
-      //}
-      
-      // Clean power chip irq status
-      power->clearIRQ();
-      // Set screen and touch to sleep mode
-      ttgo->displaySleep();
-      ttgo->powerOff();
-
-      //Set all channel power off
-      power->setPowerOutPut(AXP202_LDO3, false);
-      power->setPowerOutPut(AXP202_LDO4, false);
-      power->setPowerOutPut(AXP202_LDO2, false);
-      power->setPowerOutPut(AXP202_EXTEN, false);
-      power->setPowerOutPut(AXP202_DCDC2, false);
- 
-      // TOUCH SCREEN  Wakeup source
-      //esp_sleep_enable_ext1_wakeup(GPIO_SEL_38, ESP_EXT1_WAKEUP_ALL_LOW);
-      // PEK KEY  Wakeup source
-      esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
-      esp_deep_sleep_start();
+    if(!wallpaperDisplayed){                                                //Si le fond d'ecran n'est pas encore affiché
+        DisplayImage(1,0,0,ttgo);                                               //Affichage de l'image de fond
+        wallpaperDisplayed = true;                                              //Le fond d'ecran est affiché
     }
-    power->clearIRQ();
-    delay(1000);
-  }
-  
-  delay(100);
+
+    notificationBar();                                                      //Affichage de la barre des notification
+
+    
+    /*Si on appuis sur l'ecran*/
+    int16_t x, y;
+    if (ttgo->getTouch(x, y)) {
+        Serial.println("Change Mode");
+        delay(100);
+    }
+
+    /*bouton pressé*/
+    if (irq) {
+        irq = false;                          //on remet la variable trigger à False
+        power->readIRQ();                     //on regarde le type d'interuption
+        if (power->isPEKShortPressIRQ()) {    //si l'interuption est une pression rapide
+        //if (screenDisplay == true){         //Si l'ecran est allumer alors on l'eteint
+            //Serial.println("Turn off screen");
+            //screenDisplay = false;            //On eteint l'ecran
+            //setVibrator(200);                 //On vibre pendant 0.2 seconde
+        //}else{                              //Sinon l'ecran est eteind alors on l'allume
+            //Serial.println("Turn on screen");
+            //screenDisplay = true;             //On allume l'ecran
+            //setVibrator(200);                 //On vibre pendant 0.2 seconde
+        //}
+        
+        // Clean power chip irq status
+        power->clearIRQ();
+        // Set screen and touch to sleep mode
+        ttgo->displaySleep();
+        ttgo->powerOff();
+
+        //Set all channel power off
+        power->setPowerOutPut(AXP202_LDO3, false);
+        power->setPowerOutPut(AXP202_LDO4, false);
+        power->setPowerOutPut(AXP202_LDO2, false);
+        power->setPowerOutPut(AXP202_EXTEN, false);
+        power->setPowerOutPut(AXP202_DCDC2, false);
+    
+        // TOUCH SCREEN  Wakeup source
+        //esp_sleep_enable_ext1_wakeup(GPIO_SEL_38, ESP_EXT1_WAKEUP_ALL_LOW);
+        // PEK KEY  Wakeup source
+        esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
+        esp_deep_sleep_start();
+        }
+        power->clearIRQ();
+        delay(1000);
+    }
+    
+    delay(100);
 }

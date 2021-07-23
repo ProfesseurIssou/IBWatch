@@ -1,4 +1,8 @@
-# IBWatch 1.1.2
+# IBWatch 1.1.3
+
+## 1.1.3
+- Set brightness
+- Set/Get RTC
 
 ## 1.1.2
 - BackLight system
