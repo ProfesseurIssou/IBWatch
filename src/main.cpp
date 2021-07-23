@@ -1,27 +1,19 @@
 #include <Arduino.h>
 
-#include "config.h"
-#include "wallpaper.h"
+#include "config.h"                                                                           //Configuration des librairies
+#include "color.h"                                                                            //Couleur en HEX (COLOR_###)
+#include "wallpaper.h"                                                                        //Liste des images de fond
+#include "function.h"                                                                         //Vibrate()
+
+//CONFIG//
+#define SERIAL_SPEED 115200                                                                   //Vitesse de communication
+//######//
+
 
 TTGOClass *ttgo;
 TFT_eSPI *tft;
 AXP20X_Class *power;
 
-/*
-code    color
-0x0000  Black
-0xFFFF  White
-0xBDF7  Light Gray
-0x7BEF  Dark Gray
-0xF800  Red
-0xFFE0  Yellow
-0xFBE0  Orange
-0x79E0  Brown
-0x7E0   Green
-0x7FF   Cyan
-0x1F    Blue
-0xF81F  Pink
-*/
 
 unsigned int ss,mn,hh,dd,mm,yy; //Variables pour les dates et les heures
 byte minuteCache = 99;          //Variable pour evite le refresh constant de l'heure
@@ -29,14 +21,12 @@ bool irq = false;               //Si on doit couper l'ecrant, le bouton (irq = i
 bool rtcIrq = false;            //Quand l'horloge envoie une interuption (alarme)
 unsigned int screenMode = 0;    //Quel mode somme nous (0 = MainMenu)
 bool screenDisplay = true;      //Si on allume l'ecran
-unsigned int vibratorLimit = 0; //La limite en milliseconde que le moteur doit fonctionner (si l'horloge en milli de l'esp est supérieur alors il stop
 #define boutonPin AXP202_INT    //Simplification
 
-/*Pour le wallpaper (convertion image sur PICTOBLOX)*/ 
 int actualWallpaper = 0;    //Wallpaper actuel an fond (pour le refresh)
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(SERIAL_SPEED);
   ttgo = TTGOClass::getWatch();                   //Récuperation des instance de la montre
   ttgo->begin();                                  //On initialise le materiel
   ttgo->openBL();                                 //On démarre la lumiere de l'ecran
@@ -62,6 +52,7 @@ void setup() {
  
   tft->fillScreen(TFT_BLACK);                           //On met l'ecrant en noir
   Serial.println("START");
+  Vibrate(10,ttgo);                                                                             //On lance la vibration de demarrage
 }
 
 //Calculer l'heure et la date
@@ -91,19 +82,6 @@ void timeCalc(){
   times = times.substring(pos+1,times.length());      //Recuperation du reste de la partie
   mn = times.substring(0,pos).toInt();                //Recuperation de la partie des minutes
   ss = times.substring(pos+1,times.length()).toInt(); //Recuperation de la partie des secondes
-}
-
-//Utilisation du moteur pour les vibration
-void setVibrator(unsigned int timer){
-  vibratorLimit = millis() + timer;
-  Serial.print("VibratorLimit : ");
-  Serial.println(vibratorLimit);
-}
-void vibrator(){
-  if (vibratorLimit > millis()){            //Si on doit allumer le vibreur
-    Serial.println("Vibrator");
-    ttgo->motor->onec();                    //On allume le vibreur
-  }
 }
 
 //Pour gérer l'allumage ou non de l'ecran
@@ -185,7 +163,6 @@ void mainMenu(){
 
 void loop(){  
   //screenDisplayer();                        //On verifie si l'ecran doit etre alumé ou non
-  vibrator();                               //On verifie si on doit utilisé le vibreur
 
   if (screenDisplay == true){               //Si l'ecran est allumé
     if (screenMode == 0){
