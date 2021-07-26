@@ -59,7 +59,7 @@ void setup(){
 //Calculer l'heure et la date
 void timeCalc(){
   //on récupère les données du RTC format (2019-08-12/15:00:56)
-    String timeData = GetRTC();                                                                 //On recupere les données du RTC
+    String timeData = GetRTC(ttgo);                                                                 //On recupere les données du RTC
   String date,times;                // Les variables des parties du timeData
   unsigned int pos = 0;             // La position des séparateurs
 

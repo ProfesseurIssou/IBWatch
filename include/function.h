@@ -41,9 +41,9 @@ void SetRTC(uint prmYear,uint prmMonth,uint prmDay,uint prmHour,uint prmMinute,u
     prmTTGO->rtc->setDateTime(prmYear,prmMonth,prmDay,prmHour,prmMinute,prmSecond);
 }
 //Recuperation de la date format (2019-08-12/15:00:56)
-String GetRTC(){
+String GetRTC(TTGOClass *prmTTGO){
     //Variables
-    String timeData(ttgo->rtc->formatDateTime(PCF_TIMEFORMAT_YYYY_MM_DD_H_M_S));                        //On recupere les données du RTC au format (2019-08-12/15:00:56)
+    String timeData(prmTTGO->rtc->formatDateTime(PCF_TIMEFORMAT_YYYY_MM_DD_H_M_S));                        //On recupere les données du RTC au format (2019-08-12/15:00:56)
     //Programme
     return timeData;
 }
