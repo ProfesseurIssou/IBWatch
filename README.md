@@ -1,8 +1,13 @@
-# IBWatch 1.1.3
+# IBWatch 1.2.0
+
+## 1.2.0
+- Class Watch
+- Touch
 
 ## 1.1.3
 - Set brightness
 - Set/Get RTC
+- Bug FIX
 
 ## 1.1.2
 - BackLight system

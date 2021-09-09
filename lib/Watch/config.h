@@ -10,4 +10,6 @@
 #define LILYGO_BLOCK_ST7796S_MODULE          //Use ST7796S
 #endif
 
+#define EXTERNAL_DAC_BACKPLANE
+
 #include <LilyGoWatch.h>
