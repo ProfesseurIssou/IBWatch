@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#include "config.h"                                                                             //Configuration des librairies
+#include "config.h"                                                                             //Configuration des librairies TTGO
 
 #define SIZE_SCREEN_X 240
 #define SIZE_SCREEN_Y 240
@@ -58,6 +58,9 @@ class Watch{
         //RTC FUNCTION//
         String GetRTC();                                                                        //Recuperation de la date format (2019-08-12/15:00:56)
         void SetRTC(uint prmYear,uint prmMonth,uint prmDay,uint prmHour,uint prmMinute,uint prmSecond);//Definir l'heure du RTC
+        void EnableAlarm(bool prmEnable);                                                       //Allumé ou etteindre l'alarme
+        void SetAlarm(int8_t prmMinute,int8_t prmHour,int8_t prmDay,int8_t prmWeekDay);         //Definir l'alarm (-1 = pas pris en charge)
+        void ResetAlarm();                                                                      //Reset les alarms
         //############//
 
     private:

@@ -1,4 +1,7 @@
-# IBWatch 1.2.0
+# IBWatch 1.2.1
+
+## 1.2.1
+-Alarm
 
 ## 1.2.0
 - Class Watch

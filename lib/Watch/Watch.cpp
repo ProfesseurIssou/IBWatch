@@ -22,7 +22,7 @@ Watch::Watch(){
     watch = TTGOClass::getWatch();                                              //Instance de la montre
     watch->begin();                                                             //Initialisation du materiel
     watch->motor_begin();                                                       //Demarrage moteur de vibration pin IO4
-    watch->enableLDO3();                                                        //Demarrage de l'audio
+    watch->enableLDO3();                                                        //Demarrage de l'allimentation de l'audio
 
     screen = watch->tft;                                                        //Gestion de l'ecran
     power = watch->power;                                                       //Gestion de l'alimentation
@@ -180,23 +180,23 @@ void Watch::Vibrate(uint ms){
 bool Watch::IsCharging(){
     //Variables
     //Programme
-    return power->isChargeing();                                                                        //Retourne si la montre est en chagre
+    return power->isChargeing();                                                                    //Retourne si la montre est en chagre
 }
 //Recuperation du niveau de batterie
 int Watch::GetBatteryPercentage(){
     //Variables
     //Programme
-    return power->getBattPercentage();                                                                  //Retourne le pourcentage de batterie
+    return power->getBattPercentage();                                                              //Retourne le pourcentage de batterie
 }
 //Lecture des intéruptions
 void Watch::ReadIRQ(){
     //Variables
     //Programme
-    power->readIRQ();                                                                           //On regarde le type d'interuption
+    power->readIRQ();                                                                               //On regarde le type d'interuption
 
-    irqShortPress = power->isPEKShortPressIRQ();                                                //Si le bouton a été presser
+    irqShortPress = power->isPEKShortPressIRQ();                                                    //Si le bouton a été presser
 
-    power->clearIRQ();                                                                          //Vide la liste des Interruptions
+    power->clearIRQ();                                                                              //Vide la liste des Interruptions
 }
 //##############//
 
@@ -214,4 +214,37 @@ void Watch::SetRTC(uint prmYear,uint prmMonth,uint prmDay,uint prmHour,uint prmM
     //Programme
     rtc->setDateTime(prmYear,prmMonth,prmDay,prmHour,prmMinute,prmSecond);                          //Definition de l'heure de l'horloge interne
 }
+//Allumé ou etteindre l'alarme
+void Watch::EnableAlarm(bool prmEnable){
+    //Variables
+    //Programme
+    if(prmEnable){                                                                                  //Si on doit allumé l'alarme
+        rtc->enableAlarm();                                                                             //On allume l'alarm
+    }else{                                                                                          //Sinon
+        rtc->disableAlarm();                                                                            //On etteind l'alarme
+    }
+}
+//Definir l'alarm (-1 = pas pris en compte)
+void Watch::SetAlarm(int8_t prmMinute,int8_t prmHour,int8_t prmDay,int8_t prmWeekDay){
+    //Variables
+    //Programme
+    if(prmMinute!=-1 && prmHour==-1 && prmDay==-1 && prmWeekDay==-1){                               //Si il n'y a que les minutes
+        rtc->setAlarmByMinutes(prmMinute);
+    }else if(prmMinute==-1 && prmHour!=-1 && prmDay==-1 && prmWeekDay==-1){                         //Sinon il n'y a que les heures
+        rtc->setAlarmByHours(prmHour);
+    }else if(prmMinute==-1 && prmHour==-1 && prmDay!=-1 && prmWeekDay==-1){                         //Sinon il n'y a que les jours
+        rtc->setAlarmByDays(prmDay);
+    }else if(prmMinute==-1 && prmHour==-1 && prmDay==-1 && prmWeekDay!=-1){                         //Sinon il n'y a que les WeekDay
+        rtc->setAlarmByWeekDay(prmWeekDay);
+    }else{                                                                                          //Sinon
+        rtc->setAlarm(prmHour,prmMinute,prmDay,prmWeekDay);                                             //Definition de l'alarm   
+    }
+}
+//Reset les alarms
+void Watch::ResetAlarm(){
+    //Variables
+    //Programme
+    rtc->resetAlarm();                                                                                  //Reset des alarms
+}
+
 //############//

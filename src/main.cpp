@@ -29,6 +29,10 @@ void setup(){
     myWatch->SetBackLight(true,255);                                                                //On demarre le retroeclairage
     myWatch->Vibrate(10);                                                                           //On lance la vibration de demarrage
     wallpaperDisplayed = false;                                                                     //Pas de fond encore afficher
+
+    // myWatch->EnableAlarm(false);                                                                    //On arrete l'alarme
+    // myWatch->SetAlarm(10,-1,-1,-1);                                                                  //On definie une alarme
+    // myWatch->EnableAlarm(true);                                                                     //On demarre l'alarme
 }
 
 //Calculer l'heure et la date
@@ -130,16 +134,20 @@ void loop(){
         delay(100);
     }
 
+    if(myWatch->AlarmRing()){                                                                       //Si l'alarm sonne
+        myWatch->SetAlarmRing(false);                                                                   //On desactive l'alarme
+        myWatch->Vibrate(100);                                                                          //On lance une vibration
+        myWatch->ResetAlarm();                                                                          //On reset l'alarm
+        myWatch->EnableAlarm(false);                                                                    //On arrete l'alarme
+    }
+
     /*bouton pressé*/
     if(myWatch->ButtonPressed()){                                                                   //Si le bouton est presser
         myWatch->SetButtonPressed(false);                                                           //On remet la variable trigger à False
-
         myWatch->ReadIRQ();                                                                         //On lance la recuperation des Interruptions       
-
         if(myWatch->GetIRQShortPress()){                                                            //Si l'interuption est une pression rapide
             myWatch->DeepSleep(true,false);                                                             //On lance le deepsleep avec un allumage bouton            
         }
-
         delay(1000);
     }
     
