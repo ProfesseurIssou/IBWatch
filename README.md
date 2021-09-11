@@ -1,4 +1,7 @@
-# IBWatch 1.2.2
+# IBWatch 1.2.3
+
+## 1.2.3
+-Set count
 
 ## 1.2.2
 -Clear screen

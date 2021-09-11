@@ -140,14 +140,23 @@ void loop(){
     }
     /*########*/
 
+    /*WALLPAPER*/
     if(!wallpaperDisplayed){                                                                        //Si le fond d'ecran n'est pas encore affiché
         myWatch->DisplayImage(Wallpaper_1,Wallpaper_1_width,Wallpaper_1_height,0,0);                    //Affichage de l'image de fond
         wallpaperDisplayed = true;                                                                      //Le fond d'ecran est affiché
     }
     notificationBar();                                                                              //Affichage de la barre des notification
+    /*#########*/
 
+    /*STEP COUNTER*/
+    // if(myWatch->StepDetected()){                                                                    //Si il y a des pas
+    //     myWatch->SetStepDetected(false);                                                                //On remet le trigger a False
+    //     myWatch->SetCursorPosition(50,50);                                                              //On met le curseur d'ecriture en 50*50
+    //     myWatch->Print(String(myWatch->GetStepCount()));                                                //On affiche le nombre de pas
+    // }
+    /*############*/
 
-    /*Si on appuis sur l'ecran*/
+    /*TOUCH SCREEN*/
     if(myWatch->CheckTouch()){                                                                      //Si il y a une pression sur l'ecran
         Serial.print("Change Mode ");
         Serial.print(myWatch->GetTouchX());
@@ -155,15 +164,18 @@ void loop(){
         Serial.println(myWatch->GetTouchY());
         delay(100);
     }
+    /*############*/
 
+    /*ALARM*/
     if(myWatch->AlarmRing()){                                                                       //Si l'alarm sonne
         myWatch->SetAlarmRing(false);                                                                   //On desactive l'alarme
         myWatch->Vibrate(100);                                                                          //On lance une vibration
         myWatch->ResetAlarm();                                                                          //On reset l'alarm
         myWatch->EnableAlarm(false);                                                                    //On arrete l'alarme
     }
+    /*#####*/
 
-    /*bouton pressé*/
+    /*BOUTON PRESSER*/
     if(myWatch->ButtonPressed()){                                                                   //Si le bouton est presser
         myWatch->SetButtonPressed(false);                                                           //On remet la variable trigger à False
         myWatch->ReadIRQ();                                                                         //On lance la recuperation des Interruptions       
@@ -172,6 +184,7 @@ void loop(){
         }
         delay(1000);
     }
-    
+    /*##############*/
+
     delay(100);
 }

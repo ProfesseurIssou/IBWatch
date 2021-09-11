@@ -41,6 +41,8 @@ class Watch{
         void SetButtonPressed(bool prmState);                                                   //Definition de l'etat du bouton
         bool AlarmRing();                                                                       //Si l'alarme sonne
         void SetAlarmRing(bool prmState);                                                       //Definition de l'etat de l'alarme
+        bool StepDetected();                                                                    //Si des pas on été detecté
+        void SetStepDetected(bool prmState);                                                    //Definition de l'etat des pas on été detecté
         bool GetIRQShortPress();                                                                //Si le bouton a été pressé
         //#############//
 
@@ -84,6 +86,8 @@ class Watch{
         int GetGyroY();                                                                         //Recuperation du gyroscope y
         int GetGyroZ();                                                                         //Recuperation du gyroscope z
         int GetRotation();                                                                      //Recuperation de la rotation actuel (voir SENSOR_DIRECTION_###)
+        void ResetStepCount();                                                                  //Reinitialisation du nombre de pas
+        uint GetStepCount();                                                                    //Recuperation du nombre de pas
         //###############//
 
     private:
@@ -99,7 +103,9 @@ class Watch{
         //STATES//
         bool buttonPressed;                                                                     //Si le bouton est pressé (IRQ)
         bool alarmRing;                                                                         //Si l'alarme sonne (RTC IRQ)
+        bool stepDetected;                                                                      //Si un pas a été fait
         bool irqShortPress;                                                                     //Si le bouton a été pressé
+        bool irqStempCount;                                                                     //Si le compteur de pas detecte quelque chose
         //######//
 
         //TOUCH//

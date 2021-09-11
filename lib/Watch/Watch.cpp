@@ -17,12 +17,13 @@ Watch::Watch(){
     attachInterrupt(RTC_INT_PIN,[]{ptrWatch->SetAlarmRing(true);},FALLING);     //Si l'horloge arrive à une alarme alors la variable alarmRing == True
     pinMode(BUTTON_PIN,INPUT_PULLUP);                                           //Pin du bouton lateral comme entrée
     attachInterrupt(BUTTON_PIN,[]{ptrWatch->SetButtonPressed(true);},FALLING);  //Si le bouton est presser alors on passe la variable buttonPressed == True
+    pinMode(BMA423_INT1, INPUT);                                                //Pin du comtpeur de pas en entrée
+    attachInterrupt(BMA423_INT1,[]{ptrWatch->SetStepDetected(true);}, RISING);  //Si le compteur de pas detecte quelque chose alots on passe la variable stepDetected == True
 
 
     watch = TTGOClass::getWatch();                                              //Instance de la montre
     watch->begin();                                                             //Initialisation du materiel
     watch->motor_begin();                                                       //Demarrage moteur de vibration pin IO4
-    watch->enableLDO3();                                                        //Demarrage de l'allimentation de l'audio
 
     screen = watch->tft;                                                        //Gestion de l'ecran
     power = watch->power;                                                       //Gestion de l'alimentation
@@ -76,6 +77,10 @@ Watch::Watch(){
     sensor->enableAccel();
     // You can also turn it off
     // sensor->disableAccel();
+    sensor->enableFeature(BMA423_STEP_CNTR,true);                               //Activation du compteur de pas BMA423
+    sensor->resetStepCounter();                                                 //On remet a 0 le compteur
+    sensor->enableStepCountInterrupt();                                         //On active l'interruption du compteur de pas
+
 
     screen->setSwapBytes(1);                                                    //Convertion pour l'affichage des images (inversement des octets)
     screen->fillScreen(TFT_BLACK);                                              //On remplis l'ecran en noir
@@ -134,6 +139,18 @@ void Watch::SetAlarmRing(bool prmState){
     //Variables
     //Programme
     alarmRing = prmState;                                                       //Definition de l'etat de l'alarm
+}
+//Si des pas on été detecté
+bool Watch::StepDetected(){
+    //Variables
+    //Programme
+    return stepDetected;                                                        //Retourne l'etat de la detection des pas
+}
+//Definition de l'etat des pas on été detecté
+void Watch::SetStepDetected(bool prmState){
+    //Variables
+    //Programme
+    stepDetected = prmState;                                                    //Definition de l'etat de l'alarm
 }
 //Si le bouton a été pressé
 bool Watch::GetIRQShortPress(){
@@ -346,6 +363,19 @@ int Watch::GetRotation(){
     //Variables
     //Programme
     return sensor->direction();                                                                                     //On retourne la rotation actuel
+}
+//Reinitialisation du nombre de pas
+void Watch::ResetStepCount(){
+    //Variables
+    //PRogramme
+    sensor->resetStepCounter();                                                                 //Reinitialisation du nombre de pas
+}
+//Recuperation du nombre de pas
+uint Watch::GetStepCount(){
+    //Variables
+    //Programme
+    while(!sensor->readInterrupt()){};                                                              //Tant qu'on n'a pas encore recus l'interruption
+    return sensor->getCounter();                                                                    //On retourne le nombre de pas
 }
 
 //######//
