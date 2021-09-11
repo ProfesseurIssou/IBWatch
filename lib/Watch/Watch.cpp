@@ -28,11 +28,54 @@ Watch::Watch(){
     power = watch->power;                                                       //Gestion de l'alimentation
     motor = watch->motor;                                                       //Gestion du moteur
     rtc = watch->rtc;                                                           //Gestion de l'horloge interne
+    sensor = watch->bma;                                                        //Gestion de la detection des mouvement
 
     power->adc1Enable(AXP202_VBUS_VOL_ADC1|AXP202_VBUS_CUR_ADC1|AXP202_BATT_CUR_ADC1|AXP202_BATT_VOL_ADC1,true);//On met en route le moniteur de puissance
     power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ,true);                           //On met en place le systeme d'interuption grace au bouton
     power->clearIRQ();                                                          //On vide l'interuption
 
+    // Accel parameter structure (BMA423 accelerometer (Gyroscope/Accelerometre))
+    Acfg cfg;
+    //Output data rate in Hz, Optional parameters:
+    //   - BMA4_OUTPUT_DATA_RATE_0_78HZ
+    //   - BMA4_OUTPUT_DATA_RATE_1_56HZ
+    //   - BMA4_OUTPUT_DATA_RATE_3_12HZ
+    //   - BMA4_OUTPUT_DATA_RATE_6_25HZ
+    //   - BMA4_OUTPUT_DATA_RATE_12_5HZ
+    //   - BMA4_OUTPUT_DATA_RATE_25HZ
+    //   - BMA4_OUTPUT_DATA_RATE_50HZ
+    //   - BMA4_OUTPUT_DATA_RATE_100HZ
+    //   - BMA4_OUTPUT_DATA_RATE_200HZ
+    //   - BMA4_OUTPUT_DATA_RATE_400HZ
+    //   - BMA4_OUTPUT_DATA_RATE_800HZ
+    //   - BMA4_OUTPUT_DATA_RATE_1600HZ
+    cfg.odr = BMA4_OUTPUT_DATA_RATE_100HZ;
+    //G-range, Optional parameters:
+    //   - BMA4_ACCEL_RANGE_2G
+    //   - BMA4_ACCEL_RANGE_4G
+    //   - BMA4_ACCEL_RANGE_8G
+    //   - BMA4_ACCEL_RANGE_16G
+    cfg.range = BMA4_ACCEL_RANGE_2G;
+    //Bandwidth parameter, determines filter configuration, Optional parameters:
+    //   - BMA4_ACCEL_OSR4_AVG1
+    //   - BMA4_ACCEL_OSR2_AVG2
+    //   - BMA4_ACCEL_NORMAL_AVG4
+    //   - BMA4_ACCEL_CIC_AVG8
+    //   - BMA4_ACCEL_RES_AVG16
+    //   - BMA4_ACCEL_RES_AVG32
+    //   - BMA4_ACCEL_RES_AVG64
+    //   - BMA4_ACCEL_RES_AVG128
+    cfg.bandwidth = BMA4_ACCEL_NORMAL_AVG4;
+    //Filter performance mode , Optional parameters:
+    //   - BMA4_CIC_AVG_MODE
+    //   - BMA4_CONTINUOUS_MODE
+    cfg.perf_mode = BMA4_CONTINUOUS_MODE;
+    //Configure the BMA423 accelerometer
+    sensor->accelConfig(cfg);
+    //Enable BMA423 accelerometer
+    sensor->enableAccel();
+    // You can also turn it off
+    // sensor->disableAccel();
 
     screen->setSwapBytes(1);                                                    //Convertion pour l'affichage des images (inversement des octets)
     screen->fillScreen(TFT_BLACK);                                              //On remplis l'ecran en noir
@@ -109,27 +152,15 @@ void Watch::SetBackLight(bool prmState,uint prmBrightness){
     if(!prmState)watch->closeBL();                                              //Si on eteint
     watch->setBrightness(prmBrightness);                                        //On definie la luminosité
 }
-//Si il y a une pression
-bool Watch::CheckTouch(){
-    //Variables
-    //PRogramme
-    return watch->getTouch(touchPosX,touchPosY);                                                        //Check si il y a une pression
-}
-//Recuperation de la position de la pression X
-uint Watch::GetTouchX(){
-    //Variables
-    //Programme
-    return touchPosX;                                                                                   //Retourne position X de la pression
-}
-//Recuperation de la position de la pression Y
-uint Watch::GetTouchY(){
-    //Variables
-    //Programme
-    return touchPosY;                                                                                   //Retourne position Y de la pression
-}
 //##############//
 
 //SCREEN FUNCTION//
+//Efface l'ecran
+void Watch::ClearScreen(uint prmColor){
+    //Variables
+    //Programme
+    screen->fillScreen(prmColor);                                                                           //On replis l'ecran d'une couleur
+}
 //Affichage de l'image
 void Watch::DisplayImage(const uint16_t prmPtrImg[],uint prmWidth,uint prmHeight,uint prmX,uint prmY){
     //Variables
@@ -159,6 +190,30 @@ void Watch::Print(String prmMsg){
     //Variables
     //Programme
     screen->print(prmMsg);                                                                              //Affichage sur l'ecran
+}
+//Si il y a une pression
+bool Watch::CheckTouch(){
+    //Variables
+    //PRogramme
+    return watch->getTouch(touchPosX,touchPosY);                                                        //Check si il y a une pression
+}
+//Recuperation de la position de la pression X
+uint Watch::GetTouchX(){
+    //Variables
+    //Programme
+    return touchPosX;                                                                                   //Retourne position X de la pression
+}
+//Recuperation de la position de la pression Y
+uint Watch::GetTouchY(){
+    //Variables
+    //Programme
+    return touchPosY;                                                                                   //Retourne position Y de la pression
+}
+//Change la rotation de l'ecran (voir SCREEN_ROTATION_####)
+void Watch::SetScreenRotation(uint prmRotation){
+    //Variables
+    //Programme
+    screen->setRotation(prmRotation);                                                               //Definition de la rotation
 }
 //###############//
 
@@ -248,3 +303,49 @@ void Watch::ResetAlarm(){
 }
 
 //############//
+
+//SENSOR//
+//Recuperation du gyroscope X
+int Watch::GetGyroX(){
+    //Variables
+    Accel accelerator;                                                                              //Données du gyroscope
+    //Programme
+    if(sensor->getAccel(accelerator)){                                                              //Si on a reussi a récupérer les données du gyroscope
+        return accelerator.x;                                                                           //Accelerometre X
+    }else{
+        Serial.println("getAccel X FAIL");
+        return 0;
+    }
+}
+//Recuperation du gyroscope Y
+int Watch::GetGyroY(){
+    //Variables
+    Accel accelerator;                                                                              //Données du gyroscope
+    //Programme
+    if(sensor->getAccel(accelerator)){                                                              //Si on a reussi a récupérer les données du gyroscope
+        return accelerator.y;                                                                           //Accelerometre Y
+    }else{
+        Serial.println("getAccel Y FAIL");
+        return 0;
+    }
+}
+//Recuperation du gyroscope Z
+int Watch::GetGyroZ(){
+    //Variables
+    Accel accelerator;                                                                              //Données du gyroscope
+    //Programme
+    if(sensor->getAccel(accelerator)){                                                              //Si on a reussi a récupérer les données du gyroscope
+        return accelerator.z;                                                                           //Accelerometre z
+    }else{
+        Serial.println("getAccel Z FAIL");
+        return 0;
+    }
+}
+//Recuperation de la rotation actuel (voir SENSOR_DIRECTION_###)
+int Watch::GetRotation(){
+    //Variables
+    //Programme
+    return sensor->direction();                                                                                     //On retourne la rotation actuel
+}
+
+//######//

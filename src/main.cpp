@@ -4,7 +4,6 @@
 
 #include "wallpaper.h"                                                                          //Liste des images de fond
 #include "color.h"                                                                              //Couleur en HEX (COLOR_###)
-// #include "function.h"                                                                           //Fonction de la montre
 
 //CONFIG//
 #define SERIAL_SPEED 115200                                                                     //Vitesse de communication
@@ -16,8 +15,10 @@ Watch *myWatch;
 
 //VARIABLES//
 bool wallpaperDisplayed;                                                                    //Si le fond d'ecran est déjà affiché
-unsigned int ss,mn,hh,dd,mm,yy;                                                             //Variables pour les dates et les heures
+uint ss,mn,hh,dd,mm,yy;                                                                     //Variables pour les dates et les heures
 byte minuteCache = 99;                                                                      //Variable pour evite le refresh constant de l'heure
+uint rotation;                                                                              //Rotation de l'ecran
+uint rotationCache = SENSOR_DIRECTION_BOTTOM;                                               //Ancienne rotation de l'ecran
 //#########//
 
 void setup(){
@@ -117,14 +118,35 @@ void notificationBar(){
 }
 
 void loop(){
+    /*ROTATION*/
+    rotation = myWatch->GetRotation();                                                              //On recupere la rotation actuel du sensor
+    if(rotationCache != rotation){                                                                  //Si il y a une nouvelle rotation
+        switch(rotation){                                                                               //Pour chaque valeur de rotation
+            case SENSOR_DIRECTION_BOTTOM:                                                                   //Si on est vers le bas
+                myWatch->ClearScreen(COLOR_BLACK);                                                              //On remplis l'ecran en noir
+                wallpaperDisplayed = false;                                                                     //Il faut réafficher le fond d'ecran
+                minuteCache = 99;                                                                               //Il faut réafficher l'heure
+                rotationCache = rotation;                                                                       //On met en cache l'ancienne rotation
+                myWatch->SetScreenRotation(SCREEN_ROTATION_DOWN);                                               //On met la rotation vers le bas
+                break;
+            case SENSOR_DIRECTION_TOP:                                                                      //Si on est vers le haut
+                myWatch->ClearScreen(COLOR_BLACK);                                                              //On remplis l'ecran en noir
+                wallpaperDisplayed = false;                                                                     //Il faut réafficher le fond d'ecran
+                minuteCache = 99;                                                                               //Il faut réafficher l'heure
+                rotationCache = rotation;                                                                       //On met en cache l'ancienne rotation
+                myWatch->SetScreenRotation(SCREEN_ROTATION_UP);                                                 //On met la rotation vers le haut
+                break;
+        }
+    }
+    /*########*/
+
     if(!wallpaperDisplayed){                                                                        //Si le fond d'ecran n'est pas encore affiché
         myWatch->DisplayImage(Wallpaper_1,Wallpaper_1_width,Wallpaper_1_height,0,0);                    //Affichage de l'image de fond
         wallpaperDisplayed = true;                                                                      //Le fond d'ecran est affiché
     }
-
     notificationBar();                                                                              //Affichage de la barre des notification
 
-    
+
     /*Si on appuis sur l'ecran*/
     if(myWatch->CheckTouch()){                                                                      //Si il y a une pression sur l'ecran
         Serial.print("Change Mode ");

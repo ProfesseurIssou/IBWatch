@@ -13,6 +13,20 @@
 #define BUZZER_CHANNEL 0
 //###//
 
+//SCREEN//
+#define SCREEN_ROTATION_UP 0
+#define SCREEN_ROTATION_DOWN 2
+#define SCREEN_ROTATION_LEFT 1
+#define SCREEN_ROTATION_RIGHT 4
+//######//
+
+//SENSOR//
+#define SENSOR_DIRECTION_TOP 0
+#define SENSOR_DIRECTION_BOTTOM 1
+#define SENSOR_DIRECTION_LEFT 2
+#define SENSOR_DIRECTION_RIGHT 3
+//######//
+
 
 class Watch{
     public:
@@ -35,6 +49,7 @@ class Watch{
         //##############//
 
         //SCREEN FUNCTION//
+        void ClearScreen(uint prmColor);                                                        //Efface l'ecran
         void DisplayImage(const uint16_t prmPtrImg[],uint prmWidth,uint prmHeight,uint prmX,uint prmY);//Affichage de l'image
         void SetTextFont(uint prmSize);                                                         //Definie la taille de la police
         void SetTextColor(uint prmTextColor,uint prmBackColor);                                 //Definie la couleur du texte et du fond
@@ -43,6 +58,7 @@ class Watch{
         bool CheckTouch();                                                                      //Si il y a une pression
         uint GetTouchX();                                                                       //Recuperation de la position de la pression X
         uint GetTouchY();                                                                       //Recuperation de la position de la pression Y
+        void SetScreenRotation(uint prmRotation);                                               //Change la rotation de l'ecran (voir SCREEN_ROTATION_####)
         //###############//
 
         //MOTOR FUNCTION//
@@ -63,6 +79,13 @@ class Watch{
         void ResetAlarm();                                                                      //Reset les alarms
         //############//
 
+        //SENSOR FUNCTION//
+        int GetGyroX();                                                                         //Recuperation du gyroscope X
+        int GetGyroY();                                                                         //Recuperation du gyroscope y
+        int GetGyroZ();                                                                         //Recuperation du gyroscope z
+        int GetRotation();                                                                      //Recuperation de la rotation actuel (voir SENSOR_DIRECTION_###)
+        //###############//
+
     private:
         //CLASS//
         TTGOClass *watch;                                                                       //Class de gestion de la montre
@@ -70,6 +93,7 @@ class Watch{
         AXP20X_Class *power;                                                                    //Class de gestion de la batterie
         Motor *motor;                                                                           //Class de gestion du moteur
         PCF8563_Class *rtc;                                                                     //Class de gestion de l'horloge interne
+        BMA *sensor;                                                                            //Class de gestion de la detection des mouvements
         //#####//
 
         //STATES//
@@ -82,4 +106,8 @@ class Watch{
         int16_t touchPosX;                                                                      //Position X de la pression
         int16_t touchPosY;                                                                      //Position y de la pression
         //#####//
+
+        //SENSOR//
+
+        //######//
 };

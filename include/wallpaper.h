@@ -1,10 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-#define NB_WALLPAPER 1
-#define WALLPAPER_SCP 1
-
-
 /*Pour le wallpaper (convertion image sur PICTOBLOX)*/
 /*
 Pixel format: Alpha 8 bit, Red: 3 bit, Green: 3 bit, Blue: 2 bit (uint8)

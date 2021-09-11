@@ -1,4 +1,9 @@
-# IBWatch 1.2.1
+# IBWatch 1.2.2
+
+## 1.2.2
+-Clear screen
+-Screen rotation
+-Gyroscope 
 
 ## 1.2.1
 -Alarm
