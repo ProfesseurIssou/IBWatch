@@ -4,15 +4,17 @@ Watch *ptrWatch;
 
 //INIT/
 //Contructeur
-Watch::Watch(){
+Watch::Watch(bool prmEnableAccelerometer){
     //Variables
     //Programme
     ptrWatch = this;                                                            //Pointeur vers l'instance
     
+    //STATES//
     buttonPressed = false;                                                      //Par defaut
     alarmRing = false;                                                          //Par defaut
     irqShortPress = false;                                                      //Par defaut
 
+    //PIN//
     pinMode(RTC_PIN,INPUT_PULLUP);                                              //Pin du rtc comme entrée
     attachInterrupt(RTC_INT_PIN,[]{ptrWatch->SetAlarmRing(true);},FALLING);     //Si l'horloge arrive à une alarme alors la variable alarmRing == True
     pinMode(BUTTON_PIN,INPUT_PULLUP);                                           //Pin du bouton lateral comme entrée
@@ -20,68 +22,76 @@ Watch::Watch(){
     pinMode(BMA423_INT1, INPUT);                                                //Pin du comtpeur de pas en entrée
     attachInterrupt(BMA423_INT1,[]{ptrWatch->SetStepDetected(true);}, RISING);  //Si le compteur de pas detecte quelque chose alots on passe la variable stepDetected == True
 
-
+    //WATCH INIT//
     watch = TTGOClass::getWatch();                                              //Instance de la montre
     watch->begin();                                                             //Initialisation du materiel
     watch->motor_begin();                                                       //Demarrage moteur de vibration pin IO4
 
+    //SIMPLIFICATION
     screen = watch->tft;                                                        //Gestion de l'ecran
     power = watch->power;                                                       //Gestion de l'alimentation
     motor = watch->motor;                                                       //Gestion du moteur
     rtc = watch->rtc;                                                           //Gestion de l'horloge interne
     sensor = watch->bma;                                                        //Gestion de la detection des mouvement
 
+    //POWER
     power->adc1Enable(AXP202_VBUS_VOL_ADC1|AXP202_VBUS_CUR_ADC1|AXP202_BATT_CUR_ADC1|AXP202_BATT_VOL_ADC1,true);//On met en route le moniteur de puissance
     power->enableIRQ(AXP202_PEK_SHORTPRESS_IRQ,true);                           //On met en place le systeme d'interuption grace au bouton
     power->clearIRQ();                                                          //On vide l'interuption
 
-    // Accel parameter structure (BMA423 accelerometer (Gyroscope/Accelerometre))
-    Acfg cfg;
-    //Output data rate in Hz, Optional parameters:
-    //   - BMA4_OUTPUT_DATA_RATE_0_78HZ
-    //   - BMA4_OUTPUT_DATA_RATE_1_56HZ
-    //   - BMA4_OUTPUT_DATA_RATE_3_12HZ
-    //   - BMA4_OUTPUT_DATA_RATE_6_25HZ
-    //   - BMA4_OUTPUT_DATA_RATE_12_5HZ
-    //   - BMA4_OUTPUT_DATA_RATE_25HZ
-    //   - BMA4_OUTPUT_DATA_RATE_50HZ
-    //   - BMA4_OUTPUT_DATA_RATE_100HZ
-    //   - BMA4_OUTPUT_DATA_RATE_200HZ
-    //   - BMA4_OUTPUT_DATA_RATE_400HZ
-    //   - BMA4_OUTPUT_DATA_RATE_800HZ
-    //   - BMA4_OUTPUT_DATA_RATE_1600HZ
-    cfg.odr = BMA4_OUTPUT_DATA_RATE_100HZ;
-    //G-range, Optional parameters:
-    //   - BMA4_ACCEL_RANGE_2G
-    //   - BMA4_ACCEL_RANGE_4G
-    //   - BMA4_ACCEL_RANGE_8G
-    //   - BMA4_ACCEL_RANGE_16G
-    cfg.range = BMA4_ACCEL_RANGE_2G;
-    //Bandwidth parameter, determines filter configuration, Optional parameters:
-    //   - BMA4_ACCEL_OSR4_AVG1
-    //   - BMA4_ACCEL_OSR2_AVG2
-    //   - BMA4_ACCEL_NORMAL_AVG4
-    //   - BMA4_ACCEL_CIC_AVG8
-    //   - BMA4_ACCEL_RES_AVG16
-    //   - BMA4_ACCEL_RES_AVG32
-    //   - BMA4_ACCEL_RES_AVG64
-    //   - BMA4_ACCEL_RES_AVG128
-    cfg.bandwidth = BMA4_ACCEL_NORMAL_AVG4;
-    //Filter performance mode , Optional parameters:
-    //   - BMA4_CIC_AVG_MODE
-    //   - BMA4_CONTINUOUS_MODE
-    cfg.perf_mode = BMA4_CONTINUOUS_MODE;
-    //Configure the BMA423 accelerometer
-    sensor->accelConfig(cfg);
-    //Enable BMA423 accelerometer
-    sensor->enableAccel();
-    // You can also turn it off
-    // sensor->disableAccel();
-    sensor->enableFeature(BMA423_STEP_CNTR,true);                               //Activation du compteur de pas BMA423
-    sensor->resetStepCounter();                                                 //On remet a 0 le compteur
-    sensor->enableStepCountInterrupt();                                         //On active l'interruption du compteur de pas
+    //RTC
+    rtc->check();                                                               //Si rtc incorrecte avec le compilateur, alors on prend l'heure du compilateur
 
+    //BMA
+    if(prmEnableAccelerometer){
+     // Accel parameter structure (BMA423 accelerometer (Gyroscope/Accelerometre))
+        Acfg cfg;
+        //Output data rate in Hz, Optional parameters:
+        //   - BMA4_OUTPUT_DATA_RATE_0_78HZ
+        //   - BMA4_OUTPUT_DATA_RATE_1_56HZ
+        //   - BMA4_OUTPUT_DATA_RATE_3_12HZ
+        //   - BMA4_OUTPUT_DATA_RATE_6_25HZ
+        //   - BMA4_OUTPUT_DATA_RATE_12_5HZ
+        //   - BMA4_OUTPUT_DATA_RATE_25HZ
+        //   - BMA4_OUTPUT_DATA_RATE_50HZ
+        //   - BMA4_OUTPUT_DATA_RATE_100HZ
+        //   - BMA4_OUTPUT_DATA_RATE_200HZ
+        //   - BMA4_OUTPUT_DATA_RATE_400HZ
+        //   - BMA4_OUTPUT_DATA_RATE_800HZ
+        //   - BMA4_OUTPUT_DATA_RATE_1600HZ
+        cfg.odr = BMA4_OUTPUT_DATA_RATE_100HZ;
+        //G-range, Optional parameters:
+        //   - BMA4_ACCEL_RANGE_2G
+        //   - BMA4_ACCEL_RANGE_4G
+        //   - BMA4_ACCEL_RANGE_8G
+        //   - BMA4_ACCEL_RANGE_16G
+        cfg.range = BMA4_ACCEL_RANGE_2G;
+        //Bandwidth parameter, determines filter configuration, Optional parameters:
+        //   - BMA4_ACCEL_OSR4_AVG1
+        //   - BMA4_ACCEL_OSR2_AVG2
+        //   - BMA4_ACCEL_NORMAL_AVG4
+        //   - BMA4_ACCEL_CIC_AVG8
+        //   - BMA4_ACCEL_RES_AVG16
+        //   - BMA4_ACCEL_RES_AVG32
+        //   - BMA4_ACCEL_RES_AVG64
+        //   - BMA4_ACCEL_RES_AVG128
+        cfg.bandwidth = BMA4_ACCEL_NORMAL_AVG4;
+        //Filter performance mode , Optional parameters:
+        //   - BMA4_CIC_AVG_MODE
+        //   - BMA4_CONTINUOUS_MODE
+        cfg.perf_mode = BMA4_CONTINUOUS_MODE;
+        //Configure the BMA423 accelerometer
+        sensor->accelConfig(cfg);
+        //Enable BMA423 accelerometer
+        sensor->enableAccel();
+        // You can also turn it off
+        // sensor->disableAccel();
+        sensor->enableFeature(BMA423_STEP_CNTR,true);                               //Activation du compteur de pas BMA423
+        sensor->resetStepCounter();                                                 //On remet a 0 le compteur
+        sensor->enableStepCountInterrupt();                                         //On active l'interruption du compteur de pas
+    }
 
+    //START
     screen->setSwapBytes(1);                                                    //Convertion pour l'affichage des images (inversement des octets)
     screen->fillScreen(TFT_BLACK);                                              //On remplis l'ecran en noir
 }
@@ -377,5 +387,32 @@ uint Watch::GetStepCount(){
     while(!sensor->readInterrupt()){};                                                              //Tant qu'on n'a pas encore recus l'interruption
     return sensor->getCounter();                                                                    //On retourne le nombre de pas
 }
-
 //######//
+
+//WIFI//
+//Connexion a un wifi
+void Watch::ConnectToWifi(String prmSSID,String prmPassword){
+    //Variables
+    //Programme
+    WiFi.begin(prmSSID.c_str(),prmPassword.c_str());                                                            //On lance la connexion au wifi
+}
+//Si le wifi est connecté
+bool Watch::WifiConnected(){
+    //Variables
+    //Programme
+    return WiFi.status() == WL_CONNECTED;                                                                       //Si on est connecté
+}
+//Mettre a jour le RTC via le wifi (False:"Failed to obtain time", True:"RTC Set")
+bool Watch::SyncTimeWifi(){
+    //Variables
+    struct tm timeinfo;                                                                                                     //On créé la structure de retour pour la recuperation de l'heure
+    //Programme
+    configTime(3600,3600,"fr.pool.ntp.org");                                                                                //On configure la récupération
+    if(!getLocalTime(&timeinfo)){                                                                                           //Si on n'arrive pas a récupérer les données sur l'heure
+        return false;                                                                                                           //On retourne False
+    }
+    //Sync local time to external RTC
+    rtc->syncToRtc();                                                                                                       //On sychronise l'heure avec l'heure recus
+    return true;                                                                                                            //Synch reussi
+}
+//####//

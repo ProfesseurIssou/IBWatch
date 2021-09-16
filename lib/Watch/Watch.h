@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include <WiFi.h>
 
 #include "config.h"                                                                             //Configuration des librairies TTGO
 
@@ -28,10 +29,11 @@
 //######//
 
 
+
 class Watch{
     public:
         //INIT/
-        Watch();                                                                                //Contructeur
+        Watch(bool prmEnableAccelerometer);                                                     //Contructeur
         ~Watch();                                                                               //Destructeur
         void DeepSleep(bool prmWakeButton,bool prmWakeTouch);                                   //Lance le deep sleep de la montre
         //####//
@@ -90,6 +92,12 @@ class Watch{
         uint GetStepCount();                                                                    //Recuperation du nombre de pas
         //###############//
 
+        //WIFI//
+        void ConnectToWifi(String prmSSID,String prmPassword);                                  //Connexion a un wifi
+        bool WifiConnected();                                                                   //Si le wifi est connecté
+        bool SyncTimeWifi();                                                                    //Mettre a jour le RTC via le wifi (False:"Failed to obtain time", True:"RTC Set")
+        //####//
+
     private:
         //CLASS//
         TTGOClass *watch;                                                                       //Class de gestion de la montre
@@ -105,7 +113,6 @@ class Watch{
         bool alarmRing;                                                                         //Si l'alarme sonne (RTC IRQ)
         bool stepDetected;                                                                      //Si un pas a été fait
         bool irqShortPress;                                                                     //Si le bouton a été pressé
-        bool irqStempCount;                                                                     //Si le compteur de pas detecte quelque chose
         //######//
 
         //TOUCH//
@@ -114,6 +121,6 @@ class Watch{
         //#####//
 
         //SENSOR//
-
+        bool irqStempCount;                                                                     //Si le compteur de pas detecte quelque chose
         //######//
 };

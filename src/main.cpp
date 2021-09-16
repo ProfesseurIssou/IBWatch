@@ -25,7 +25,7 @@ void setup(){
     Serial.begin(SERIAL_SPEED);                                                                     //On definie la vitesse de communication
     Serial.println("START");
     
-    myWatch = new Watch();                                                                          //Creation du gestionnaire de la montre
+    myWatch = new Watch(false);                                                                     //Creation du gestionnaire de la montre (pas d'accelerometre)
 
     myWatch->SetBackLight(true,255);                                                                //On demarre le retroeclairage
     myWatch->Vibrate(10);                                                                           //On lance la vibration de demarrage
@@ -34,6 +34,29 @@ void setup(){
     // myWatch->EnableAlarm(false);                                                                    //On arrete l'alarme
     // myWatch->SetAlarm(10,-1,-1,-1);                                                                  //On definie une alarme
     // myWatch->EnableAlarm(true);                                                                     //On demarre l'alarme
+
+    delay(5000);                                                                                    //5000ms
+}
+
+//Sync du rtc
+void WifiSyncRTC(){
+    //Variables
+    //Programme
+    myWatch->ConnectToWifi("SSID","PASSWORD");                                  //Connection au wifi
+    while(myWatch->WifiConnected()){                                                                //Tant que le wifi n'est pas connecté
+        delay(500);                                                                                     //500ms
+    }
+    myWatch->SetCursorPosition(150,225);                                                            //On ecrit en bas de l'ecran
+    myWatch->SetTextColor(TFT_GREEN,TFT_BLACK);                                                     //Text vert fond noir
+    if(!myWatch->SyncTimeWifi()){                                                                   //Si on n'arrive pas a synchronisé le wifi
+        myWatch->SetCursorPosition(150,225);                                                            //On ecrit en bas de l'ecran
+        myWatch->Print("Sync Failed ");
+        delay(1000);                                                                                    //1000ms
+        myWatch->SetCursorPosition(150,225);                                                            //On ecrit en bas de l'ecran
+        myWatch->Print("Sync        ");
+    }
+    myWatch->SetCursorPosition(150,225);                                                            //On ecrit en bas de l'ecran
+    myWatch->Print("Synchronized");
 }
 
 //Calculer l'heure et la date
@@ -119,25 +142,25 @@ void notificationBar(){
 
 void loop(){
     /*ROTATION*/
-    rotation = myWatch->GetRotation();                                                              //On recupere la rotation actuel du sensor
-    if(rotationCache != rotation){                                                                  //Si il y a une nouvelle rotation
-        switch(rotation){                                                                               //Pour chaque valeur de rotation
-            case SENSOR_DIRECTION_BOTTOM:                                                                   //Si on est vers le bas
-                myWatch->ClearScreen(COLOR_BLACK);                                                              //On remplis l'ecran en noir
-                wallpaperDisplayed = false;                                                                     //Il faut réafficher le fond d'ecran
-                minuteCache = 99;                                                                               //Il faut réafficher l'heure
-                rotationCache = rotation;                                                                       //On met en cache l'ancienne rotation
-                myWatch->SetScreenRotation(SCREEN_ROTATION_DOWN);                                               //On met la rotation vers le bas
-                break;
-            case SENSOR_DIRECTION_TOP:                                                                      //Si on est vers le haut
-                myWatch->ClearScreen(COLOR_BLACK);                                                              //On remplis l'ecran en noir
-                wallpaperDisplayed = false;                                                                     //Il faut réafficher le fond d'ecran
-                minuteCache = 99;                                                                               //Il faut réafficher l'heure
-                rotationCache = rotation;                                                                       //On met en cache l'ancienne rotation
-                myWatch->SetScreenRotation(SCREEN_ROTATION_UP);                                                 //On met la rotation vers le haut
-                break;
-        }
-    }
+    // rotation = myWatch->GetRotation();                                                              //On recupere la rotation actuel du sensor
+    // if(rotationCache != rotation){                                                                  //Si il y a une nouvelle rotation
+    //     switch(rotation){                                                                               //Pour chaque valeur de rotation
+    //         case SENSOR_DIRECTION_BOTTOM:                                                                   //Si on est vers le bas
+    //             myWatch->ClearScreen(COLOR_BLACK);                                                              //On remplis l'ecran en noir
+    //             wallpaperDisplayed = false;                                                                     //Il faut réafficher le fond d'ecran
+    //             minuteCache = 99;                                                                               //Il faut réafficher l'heure
+    //             rotationCache = rotation;                                                                       //On met en cache l'ancienne rotation
+    //             myWatch->SetScreenRotation(SCREEN_ROTATION_DOWN);                                               //On met la rotation vers le bas
+    //             break;
+    //         case SENSOR_DIRECTION_TOP:                                                                      //Si on est vers le haut
+    //             myWatch->ClearScreen(COLOR_BLACK);                                                              //On remplis l'ecran en noir
+    //             wallpaperDisplayed = false;                                                                     //Il faut réafficher le fond d'ecran
+    //             minuteCache = 99;                                                                               //Il faut réafficher l'heure
+    //             rotationCache = rotation;                                                                       //On met en cache l'ancienne rotation
+    //             myWatch->SetScreenRotation(SCREEN_ROTATION_UP);                                                 //On met la rotation vers le haut
+    //             break;
+    //     }
+    // }
     /*########*/
 
     /*WALLPAPER*/
@@ -162,6 +185,7 @@ void loop(){
         Serial.print(myWatch->GetTouchX());
         Serial.print(" ");
         Serial.println(myWatch->GetTouchY());
+        WifiSyncRTC();                                                                                  //Sync RTC avec le wifi
         delay(100);
     }
     /*############*/
@@ -185,6 +209,17 @@ void loop(){
         delay(1000);
     }
     /*##############*/
+
+    /*WIFI*/    
+    myWatch->SetCursorPosition(0,225);                                                              //On ecrit en bas de l'ecran
+    myWatch->SetTextColor(TFT_GREEN,TFT_BLACK);                                                     //Text vert fond noir
+    if(myWatch->WifiConnected()){                                                                   //Si le wifi est connecté
+        myWatch->Print("CONNECTED    ");                                                                //Print
+    }else{                                                                                          //Sinon
+        myWatch->Print("NOT CONNECTED");                                                                //Print
+    }
+    /*####*/
+
 
     delay(100);
 }

@@ -1,15 +1,16 @@
 # IBWatch 1.2.3
 
 ## 1.2.3
--Set count
+- Sync RTC with WIFI
+- Optional BMA sensor
 
 ## 1.2.2
--Clear screen
--Screen rotation
--Gyroscope 
+- Clear screen
+- Screen rotation
+- Gyroscope 
 
 ## 1.2.1
--Alarm
+- Alarm
 
 ## 1.2.0
 - Class Watch

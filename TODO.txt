@@ -2,3 +2,5 @@ ttgo->displayOff();
 
 // Set screen and touch to sleep mode
 watch->displaySleep();
+
+esp_restart();
